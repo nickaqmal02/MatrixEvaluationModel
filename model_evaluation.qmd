@@ -1,0 +1,337 @@
+---
+title: "Sentiri Model Evaluation — Why XLM-RoBERTa and BERTopic?"
+subtitle: "Sentiment model comparison & topic modeling justification for an autism therapy chat analyzer"
+author: "Nik Abdul Aqmal"
+date: today
+format:
+  html:
+    theme: cosmo
+    toc: true
+    toc-depth: 3
+    code-fold: true
+    code-tools: true
+    execute:
+      echo: true
+      warning: false
+jupyter: jupyter_env
+---
+
+# Introduction {.unnumbered}
+
+**The question this report answers:** why did Sentiri choose **XLM-RoBERTa** for
+sentiment analysis and **BERTopic** for topic modeling, instead of the alternatives?
+
+The defense is not authority ("XLM-R is popular") — it is **evidence**: define the
+requirements, compare candidates against them on the same data, and let the results
+justify the choice.
+
+## Requirements that drive model choice
+
+| # | Requirement | Consequence for model choice |
+|---|---|---|
+| R1 | Malaysian chat text: Malay-English code-switching (*rojak*) | Model must be multilingual at the token level, not translated |
+| R2 | 3 classes: negative / neutral / positive, imbalanced | Need macro-F1 + per-class recall, not accuracy alone |
+| R3 | Clinical context: distressed messages must not be missed | Negative-class **recall** is the priority metric |
+| R4 | Deployment on a budget (Render + HF Inference) | Model size + inference time matter |
+| R5 | Short, informal, noisy messages (WhatsApp-style) | Model must handle 3–20 token messages without dilution |
+
+## Candidates
+
+| Model | Role in comparison | Params |
+|---|---|---|
+| XLM-RoBERTa-base | Generalist multilingual heavyweight (our pick) | 278M |
+| mBERT-base | The older multilingual baseline | 178M |
+| IndoBERT-base-p1 | Regional specialist (Indonesian/Malay) | 124M |
+| DistilBERT-multilingual | Efficiency baseline | 135M |
+
+**Hypothesis:** XLM-R wins on mixed rojak messages; IndoBERT may win on pure formal
+Malay. The per-message breakdown is the interesting finding — which is exactly what
+the evaluation is for.
+
+# Data
+
+Source: 2,171 labeled WhatsApp messages (pos/neg/neutral) from the autism therapy
+domain. Same split (seed=42) for every model — a comparison is only fair if all
+candidates see identical train/test folds.
+
+# Setup {.unnumbered}
+
+```{python}
+#| label: setup
+#| context: setup
+import warnings
+warnings.filterwarnings("ignore")
+
+import os, sys, time
+import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
+from pathlib import Path
+from sklearn.metrics import (
+    accuracy_score, f1_score, precision_score, recall_score,
+    confusion_matrix, ConfusionMatrixDisplay, classification_report,
+)
+
+# --- Production pipeline access -------------------------------------------
+# We import the REAL cleaner from the Sentiri codebase, not a copy.
+# This is the same code the Django server runs — so the evaluation measures
+# the production pipeline, not a notebook re-implementation (no train/serve skew).
+SENTIRI_ROOT = Path("/Users/apple/degree/finalyearengineredo")
+os.environ.setdefault("DJANGO_SETTINGS_MODULE", "finalyearengineredo.settings")
+sys.path.insert(0, str(SENTIRI_ROOT))
+
+import django
+django.setup()
+
+DATA = SENTIRI_ROOT / "chat_analyzer/data/labeled_data/labeledsentimentdatatwo_balanced.csv"
+LABELS = {0: "negative", 1: "neutral", 2: "positive"}
+```
+
+# The cleaning pipeline (what the model actually sees)
+
+The production pipeline cleans every message through `MalayTextCleaner` before
+it reaches any model. Two different cleaning profiles exist, because the two
+downstream tasks need different text:
+
+| Profile | What it keeps | Why |
+|---|---|---|
+| `clean_for_sentiment` | negation words (*tak, x, bukan*), sentiment-bearing tokens | Negation flips sentiment — removing *tak* turns "tak nak" into "nak" |
+| `clean_for_topic_modeling` | domain words, stems | Topic modeling needs dense topical signal; stopwords are noise |
+
+Shared layers in `_base_clean` (both profiles inherit): normalizer → typo/slang
+mapping → emoji conversion → **PII removal (person names + honorifics, before
+steming)** → curse filtering.
+
+## The lexicon files (the cleaner's knowledge base)
+
+The cleaner is rules + data. The *code* is ~450 lines; the *knowledge* lives in
+12 curated data files under `chat_analyzer/data/`. This is deliberate: domain
+experts (admin) can improve the pipeline by editing data, not code.
+
+```{python}
+#| label: lexicon-inventory
+#| tbl-cap: "Curated lexicon files backing the cleaning pipeline"
+import json
+DATA_DIR = SENTIRI_ROOT / "chat_analyzer/data"
+
+def count_entries(path):
+    if path.suffix == ".json":
+        return len(json.load(open(path)))
+    return sum(1 for line in open(path, encoding="utf-8")
+               if line.strip() and not line.strip().startswith("#"))
+
+lexicon_files = [
+    ("typo_mapping.json",       "Typo corrections (raw → correct form)"),
+    ("slang_mapping.json",      "Chat slang / abbreviations (mkn → makan, x nk → tak nak)"),
+    ("emoji_mapping.json",      "Emoji → sentiment word conversion"),
+    ("root_mapping.json",       "Irregular root word mapping"),
+    ("english_to_malay.json",   "English → Malay translation (topic path)"),
+    ("stopwords_malay.txt",     "Base Malay stopwords"),
+    ("sentiment_stopwords.txt", "LIGHT stopwords — sentiment path keeps negation words"),
+    ("topic_stopwords.txt",     "HEAVY stopwords — topic path strips aggressively"),
+    ("domain_words_topic.txt",  "Therapy domain terms to KEEP (topic path)"),
+    ("domain_words_sentiment.txt", "Sentiment-bearing terms to KEEP (sentiment path)"),
+    ("person_names.txt",        "PII blocklist: client/staff names + honorifics (removed before stemming)"),
+]
+
+pd.DataFrame(
+    [(name, count_entries(DATA_DIR / name), desc) for name, desc in lexicon_files],
+    columns=["File", "Entries", "Purpose"],
+).set_index("File")
+```
+
+## Before / after on real messages
+
+```{python}
+#| label: cleaning-demo
+import json
+from chat_analyzer.services.text_cleaner import clean_for_sentiment, clean_for_topic_modeling
+
+demo = [
+    "Puan Aina kata affan tidur lewat semalam 😴 x nk mkn nasi",
+    "syukur alhamdulillah hari ni ammar dah boleh duduk diam2 dlm kelas",
+]
+pd.DataFrame({
+    "raw": demo,
+    "sentiment_input": [clean_for_sentiment(t) for t in demo],
+    "topic_input": [clean_for_topic_modeling(t) for t in demo],
+})
+```
+
+# Part 1 — Why not a lexicon approach?
+
+The initial direction (suggested by our lecturer) was a **lexicon-based** sentiment
+analyzer: score each message by looking up its words in a sentiment dictionary.
+We investigated and rejected this approach — for three evidence-backed reasons.
+
+## 1.1 The resource gap (weaker argument)
+
+Malay has **no maintained, ready-to-use sentiment lexicon** — nothing comparable
+to English's VADER, SentiWordNet, or AFINN that one can download and run today.
+What exists are *induction methods* in research papers (Omar et al. 2017 maps
+WordNet Bahasa onto English SentiWordNet; cross-lingual synset-mapping experiments
+exist), whose outputs are not published as reusable artifacts. This is a real
+but recoverable obstacle — one could build a domain lexicon — so it alone does
+not justify abandoning the approach. The decisive arguments follow.
+
+## 1.2 Contextual polarity flips — the measured failure mode
+
+A lexicon assigns each word a **prior polarity** (dictionary meaning). But words
+carry their **contextual polarity** from the sentence. In therapy-progress
+chats, this gap is not an edge case — we measured it:
+
+```{python}
+#| label: lexicon-traps
+#| tbl-cap: "Negative-labeled messages that contain dictionary-positive words"
+df_raw = pd.read_csv(DATA)
+
+POS_WORDS = ["bagus", "baik", "gembira", "syukur", "senang", "best",
+             "pandai", "bijak", "boleh", "suka", "terer", "hebat"]
+pattern = "|".join(POS_WORDS)
+
+traps = df_raw[(df_raw["label"] == 0)
+               & (df_raw["text"].str.lower().str.contains(pattern, na=False))]
+n_neg = (df_raw["label"] == 0).sum()
+print(f"Negative messages containing a positive-looking word: "
+      f"{len(traps)} / {n_neg} ({100*len(traps)/n_neg:.1f}%)")
+traps["text"].head(12).tolist()
+```
+
+The recurring patterns in these messages — the *reasons* word-level lookup fails:
+
+| Trap | Example from our data | Why a lexicon cannot see it |
+|---|---|---|
+| **Negation** | "merangkak pun **tak boleh**" | *boleh* scores positive; the *tak* before it flips the phrase. Lexicons score words one at a time |
+| **Contrastive conjunction** | "ammar boleh membaca **tetapi** tidak boleh berinteraksi" | First clause positive, whole sentence negative — polarity lives in the *contrast*, not any single word |
+| **Mixed-clause polarity** | "dia selalu sedih dan **suka** marah, merajuk" | *suka* ("likes") attaches to a negative behavior: "easily angered" |
+| **Domain semantics** | "dia masih tak boleh control" | Progress-report framing makes capability words markers of *struggle* when negated |
+
+This is the **prior vs contextual polarity** distinction (Wilson, Wiebe &
+Hoffmann, 2005): lexicons capture the former, sentiment in real text is carried
+by the latter. A transformer reads the whole sequence and learns these flips
+from labeled data — including that "tidur lewat" is a complaint, not a nap report.
+
+## 1.3 Lexicon baseline — measured, not assumed
+
+To honor the suggestion properly, we test it rather than dismiss it. The
+baseline below scores messages using our curated sentiment word lists (the same
+domain knowledge embedded in `domain_words_sentiment.txt`) — the strongest
+lexicon a lexicon approach could reasonably have here.
+
+```{python}
+#| label: lexicon-baseline
+# TODO (you): implement LexiconBaseline as a fifth row of the comparison.
+#   1. Load positive and negative word lists (from domain_words_sentiment.txt
+#      or a curated pos/neg pair of lists).
+#   2. Score: for each message, count positive hits minus negative hits
+#      (lowercase, simple substring or token match).
+#   3. DECISION (answer before coding): a message with ZERO lexicon hits gets
+#      which label? Most messages are logistical smalltalk with no sentiment
+#      words at all. Choose the mapping that is FAVORABLE to the baseline
+#      (not a strawman) — and justify it in a comment.
+#   4. Evaluate on the same test split as the neural models: accuracy, macro-F1,
+#      and — the key number — its accuracy on the `traps` subset above.
+#      Prediction to make before running: will the lexicon beat random on the
+#      traps subset? Why or why not?
+```
+
+# Part 2 — Sentiment model comparison
+
+## 2.1 Load and split
+
+```{python}
+#| label: load-data
+# TODO (you): load the CSV, show class distribution, train/test split seed=42 test_size=0.2
+# Hint: mirror fine_tune_sentiment.py's data path and split so results are comparable.
+df = pd.read_csv(DATA)
+...
+```
+
+## 1.2 Fine-tune XLM-R (the incumbent)
+
+```{python}
+#| label: train-xlmr
+# TODO (you): fine-tune xlm-roberta-base on the train split.
+#   - same hyperparameters as chat_analyzer/services/fine_tune_sentiment.py
+#     (so this notebook reproduces the production model)
+#   - record: per-class precision/recall/F1 on test, macro-F1, accuracy,
+#     train time, params count
+```
+
+## 1.3 Baselines: mBERT, IndoBERT, DistilBERT
+
+```{python}
+#| label: train-baselines
+# TODO (you): same recipe (epochs, lr, batch size) for each baseline.
+#   FAIRNESS RULE: only the checkpoint changes; everything else identical.
+#   That's what makes "XLM-R beat mBERT by X points" a defensible claim.
+```
+
+## 1.4 Metrics matrix
+
+```{python}
+#| label: metrics-matrix
+# TODO (you): build a results DataFrame: model × {accuracy, macro-F1,
+#   per-class P/R/F1, negative recall (clinical priority), train time,
+#   params}. Display as a styled Quarto table.
+```
+
+## 1.5 Confusion matrices
+
+```{python}
+#| label: confusion
+# TODO (you): 2×2 grid of confusion matrices, one per model.
+#   Question to answer from the picture: WHERE does each model lose?
+#   (e.g. does mBERT confuse neutral↔positive on rojak messages?)
+```
+
+## 1.6 RQ breakdown: rojak vs pure Malay
+
+```{python}
+#| label: rojak-breakdown
+# TODO (you): classify test messages as rojak (contains English tokens)
+#   vs pure Malay; compute per-group accuracy for each model.
+#   This is the section that directly tests the hypothesis and answers "why XLM-R".
+```
+
+## 1.7 Decision
+
+```{python}
+#| label: decision-sentiment
+# TODO (you): summarize — which model wins which requirement (R1-R5)?
+#   If XLM-R wins: quantify by how much. If a baseline ties: say so honestly.
+```
+
+# Part 3 — Why BERTopic?
+
+```{python}
+#| label: topic-setup
+# TODO (you): the topic-modeling defense is different from sentiment's.
+#   Sentiment has labels → supervised comparison. Topic modeling has NO labels
+#   → the justification is architectural:
+#     1. Why topic modeling at all (vs. keyword rules alone) — the 88 ambiguous
+#        messages that rules couldn't decide (Run 7/8 evidence)
+#     2. Why BERTopic specifically:
+#        - transformer embeddings = semantics, not string matching
+#          (the 'tidur' → Sleep Patterns win in Run 8c)
+#        - UMAP+HDBSCAN = density clustering that allows outliers (-1)
+#          vs k-means forcing every point into a cluster
+#        - c-TF-IDF = interpretable topic names (admin can promote/review)
+#        - hybrid pipeline: coverage override + cluster inheritance + fallback
+#   TODO: compute topic coherence (c_v) on the trained model as the quantitative
+#   evidence, plus cluster size distribution chart.
+```
+
+# Conclusion
+
+TODO: the one-breath viva answer, backed by the numbers above.
+
+## References {.unnumbered}
+
+- Conneau et al. (2020), *Unsupervised Cross-lingual Representation Learning at Scale* (XLM-R)
+- Grootendorst (2022), *BERTopic: Neural topic modeling with a class-based TF-IDF procedure* (arXiv:2203.05794)
+- Devlin et al. (2019), BERT; Wilkinson et al. (2021), IndoBERT (IndoNLU)
+- Sanh et al. (2019), DistilBERT
+- Wilson, Wiebe & Hoffmann (2005), *Recognizing Contextual Polarity in Phrase-Level Sentiment Analysis*, HLT/EMNLP — prior vs contextual polarity
+- Omar et al. (2017), *Minimally-Supervised Sentiment Lexicon Induction Model: A Case Study of Malay Sentiment Analysis*, Springer — state of Malay lexicon resources
+- Noor, Sapuan & Bond (2011), *WordNet Bahasa* — Malay semantic network (not a sentiment lexicon)

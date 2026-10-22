@@ -1,0 +1,1518 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
+
+<meta charset="utf-8">
+<meta name="generator" content="quarto-1.10.18">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+
+<meta name="author" content="Nik Abdul Aqmal">
+<meta name="dcterms.date" content="2026-10-22">
+
+<title>Sentiri Model Evaluation — Why XLM-RoBERTa and BERTopic?</title>
+<style>
+/* Default styles provided by pandoc.
+** See https://pandoc.org/MANUAL.html#variables-for-html for config info.
+*/
+span.smallcaps{font-variant: small-caps;}
+div.columns{display: flex; gap: 1.5em;}
+div.column{flex: auto;}
+@media screen {
+div.columns{gap: min(4vw, 1.5em);}
+div.column{overflow-x: auto;}
+}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+ul.task-list li input[type="checkbox"] {
+  width: 0.8em;
+  margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
+  vertical-align: middle;
+}
+/* CSS for syntax highlighting */
+html { -webkit-text-size-adjust: 100%; }
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+  { counter-reset: source-line 0; }
+pre.numberSource code > span
+  { position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+  { content: counter(source-line);
+    position: relative; left: -1em; text-align: right; vertical-align: baseline;
+    border: none; display: inline-block;
+    -webkit-touch-callout: none; -webkit-user-select: none;
+    -khtml-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    padding: 0 4px; width: 4em;
+  }
+pre.numberSource { margin-left: 3em;  padding-left: 4px; }
+div.sourceCode
+  {   }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+</style>
+
+
+<script src="https://cdn.jsdelivr.net/npm/jquery@3.5.1/dist/jquery.min.js" integrity="sha384-ZvpUoO/+PpLXR1lu4jmpXWu80pZlYUAfxl5NsBMWOEPSjUn/6Z/hRTt8+pR6L4N2" crossorigin="anonymous"></script><script src="model_evaluation_files/libs/clipboard/clipboard.min.js"></script>
+<script src="model_evaluation_files/libs/quarto-html/quarto.js" type="module"></script>
+<script src="model_evaluation_files/libs/quarto-html/tabsets/tabsets.js" type="module"></script>
+<script src="model_evaluation_files/libs/quarto-html/popper.min.js"></script>
+<script src="model_evaluation_files/libs/quarto-html/tippy.umd.min.js"></script>
+<script src="model_evaluation_files/libs/quarto-html/anchor.min.js"></script>
+<link href="model_evaluation_files/libs/quarto-html/tippy.css" rel="stylesheet">
+<link href="model_evaluation_files/libs/quarto-html/quarto-syntax-highlighting-64a204ab8560d761af7679ceaba22944.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<script src="model_evaluation_files/libs/bootstrap/bootstrap.min.js"></script>
+<link href="model_evaluation_files/libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
+<link href="model_evaluation_files/libs/bootstrap/bootstrap-c2e55264ed47ce3b2e0326a2269f9400.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
+<script src="https://cdn.jsdelivr.net/npm/requirejs@2.3.6/require.min.js" integrity="sha384-c9c+LnTbwQ3aujuU7ULEPVvgLs+Fn6fJUvIGTsuu1ZcCf11fiEubah0ttpca4ntM sha384-6V1/AdqZRWk1KAlWbKBlGhN7VG4iE/yAZcO6NZPMF8od0vukrvr0tg4qY6NSrItx" crossorigin="anonymous"></script>
+
+<script type="application/javascript">define('jquery', [],function() {return window.jQuery;})</script>
+
+
+</head>
+
+<body class="quarto-light">
+
+<div id="quarto-content" class="page-columns page-rows-contents page-layout-article">
+<div id="quarto-margin-sidebar" class="sidebar margin-sidebar">
+  <nav id="TOC" role="doc-toc" class="toc-active">
+    <h2 id="toc-title">Table of contents</h2>
+   
+  <ul>
+  <li><a href="#introduction" id="toc-introduction" class="nav-link active" data-scroll-target="#introduction">Introduction</a>
+  <ul class="collapse">
+  <li><a href="#requirements-that-drive-model-choice" id="toc-requirements-that-drive-model-choice" class="nav-link" data-scroll-target="#requirements-that-drive-model-choice">Requirements that drive model choice</a></li>
+  <li><a href="#candidates" id="toc-candidates" class="nav-link" data-scroll-target="#candidates">Candidates</a></li>
+  </ul></li>
+  <li><a href="#data" id="toc-data" class="nav-link" data-scroll-target="#data">Data</a></li>
+  <li><a href="#setup" id="toc-setup" class="nav-link" data-scroll-target="#setup">Setup</a></li>
+  <li><a href="#the-cleaning-pipeline-what-the-model-actually-sees" id="toc-the-cleaning-pipeline-what-the-model-actually-sees" class="nav-link" data-scroll-target="#the-cleaning-pipeline-what-the-model-actually-sees">The cleaning pipeline (what the model actually sees)</a>
+  <ul class="collapse">
+  <li><a href="#the-lexicon-files-the-cleaners-knowledge-base" id="toc-the-lexicon-files-the-cleaners-knowledge-base" class="nav-link" data-scroll-target="#the-lexicon-files-the-cleaners-knowledge-base">The lexicon files (the cleaner’s knowledge base)</a></li>
+  <li><a href="#before-after-on-real-messages" id="toc-before-after-on-real-messages" class="nav-link" data-scroll-target="#before-after-on-real-messages">Before / after on real messages</a></li>
+  </ul></li>
+  <li><a href="#part-1-why-not-a-lexicon-approach" id="toc-part-1-why-not-a-lexicon-approach" class="nav-link" data-scroll-target="#part-1-why-not-a-lexicon-approach">Part 1 — Why not a lexicon approach?</a>
+  <ul class="collapse">
+  <li><a href="#the-resource-gap-weaker-argument" id="toc-the-resource-gap-weaker-argument" class="nav-link" data-scroll-target="#the-resource-gap-weaker-argument">1.1 The resource gap (weaker argument)</a></li>
+  <li><a href="#contextual-polarity-flips-the-measured-failure-mode" id="toc-contextual-polarity-flips-the-measured-failure-mode" class="nav-link" data-scroll-target="#contextual-polarity-flips-the-measured-failure-mode">1.2 Contextual polarity flips — the measured failure mode</a></li>
+  <li><a href="#lexicon-baseline-measured-not-assumed" id="toc-lexicon-baseline-measured-not-assumed" class="nav-link" data-scroll-target="#lexicon-baseline-measured-not-assumed">1.3 Lexicon baseline — measured, not assumed</a></li>
+  </ul></li>
+  <li><a href="#part-2-sentiment-model-comparison" id="toc-part-2-sentiment-model-comparison" class="nav-link" data-scroll-target="#part-2-sentiment-model-comparison">Part 2 — Sentiment model comparison</a>
+  <ul class="collapse">
+  <li><a href="#load-and-split" id="toc-load-and-split" class="nav-link" data-scroll-target="#load-and-split">2.1 Load and split</a></li>
+  <li><a href="#fine-tune-xlm-r-the-incumbent" id="toc-fine-tune-xlm-r-the-incumbent" class="nav-link" data-scroll-target="#fine-tune-xlm-r-the-incumbent">1.2 Fine-tune XLM-R (the incumbent)</a></li>
+  <li><a href="#baselines-mbert-indobert-distilbert" id="toc-baselines-mbert-indobert-distilbert" class="nav-link" data-scroll-target="#baselines-mbert-indobert-distilbert">1.3 Baselines: mBERT, IndoBERT, DistilBERT</a></li>
+  <li><a href="#metrics-matrix" id="toc-metrics-matrix" class="nav-link" data-scroll-target="#metrics-matrix">1.4 Metrics matrix</a></li>
+  <li><a href="#confusion-matrices" id="toc-confusion-matrices" class="nav-link" data-scroll-target="#confusion-matrices">1.5 Confusion matrices</a></li>
+  <li><a href="#rq-breakdown-rojak-vs-pure-malay" id="toc-rq-breakdown-rojak-vs-pure-malay" class="nav-link" data-scroll-target="#rq-breakdown-rojak-vs-pure-malay">1.6 RQ breakdown: rojak vs pure Malay</a></li>
+  <li><a href="#decision" id="toc-decision" class="nav-link" data-scroll-target="#decision">1.7 Decision</a></li>
+  </ul></li>
+  <li><a href="#part-3-why-bertopic" id="toc-part-3-why-bertopic" class="nav-link" data-scroll-target="#part-3-why-bertopic">Part 3 — Why BERTopic?</a></li>
+  <li><a href="#conclusion" id="toc-conclusion" class="nav-link" data-scroll-target="#conclusion">Conclusion</a>
+  <ul class="collapse">
+  <li><a href="#references" id="toc-references" class="nav-link" data-scroll-target="#references">References</a></li>
+  </ul></li>
+  </ul>
+</nav>
+</div>
+<main class="content" id="quarto-document-content">
+
+<header id="title-block-header" class="quarto-title-block default">
+<div class="quarto-title">
+<div class="quarto-title-block"><div><h1 class="title">Sentiri Model Evaluation — Why XLM-RoBERTa and BERTopic?</h1><button type="button" class="btn code-tools-button dropdown-toggle" id="quarto-code-tools-menu" data-bs-toggle="dropdown" aria-expanded="false"><i class="bi"></i> Code</button><ul class="dropdown-menu dropdown-menu-end" aria-labelelledby="quarto-code-tools-menu"><li><a id="quarto-show-all-code" class="dropdown-item" href="javascript:void(0)" role="button">Show All Code</a></li><li><a id="quarto-hide-all-code" class="dropdown-item" href="javascript:void(0)" role="button">Hide All Code</a></li><li><hr class="dropdown-divider"></li><li><a id="quarto-view-source" class="dropdown-item" href="javascript:void(0)" role="button">View Source</a></li></ul></div></div>
+<p class="subtitle lead">Sentiment model comparison &amp; topic modeling justification for an autism therapy chat analyzer</p>
+</div>
+
+
+
+<div class="quarto-title-meta">
+
+    <div>
+    <div class="quarto-title-meta-heading">Author</div>
+    <div class="quarto-title-meta-contents">
+             <p>Nik Abdul Aqmal </p>
+          </div>
+  </div>
+    
+    <div>
+    <div class="quarto-title-meta-heading">Published</div>
+    <div class="quarto-title-meta-contents">
+      <p class="date">October 22, 2026</p>
+    </div>
+  </div>
+  
+    
+  </div>
+  
+
+
+</header>
+
+
+<section id="introduction" class="level1 unnumbered">
+<h1 class="unnumbered">Introduction</h1>
+<p><strong>The question this report answers:</strong> why did Sentiri choose <strong>XLM-RoBERTa</strong> for sentiment analysis and <strong>BERTopic</strong> for topic modeling, instead of the alternatives?</p>
+<p>The defense is not authority (“XLM-R is popular”) — it is <strong>evidence</strong>: define the requirements, compare candidates against them on the same data, and let the results justify the choice.</p>
+<section id="requirements-that-drive-model-choice" class="level2">
+<h2 class="anchored" data-anchor-id="requirements-that-drive-model-choice">Requirements that drive model choice</h2>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 33%">
+<col style="width: 33%">
+<col style="width: 33%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>#</th>
+<th>Requirement</th>
+<th>Consequence for model choice</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>R1</td>
+<td>Malaysian chat text: Malay-English code-switching (<em>rojak</em>)</td>
+<td>Model must be multilingual at the token level, not translated</td>
+</tr>
+<tr class="even">
+<td>R2</td>
+<td>3 classes: negative / neutral / positive, imbalanced</td>
+<td>Need macro-F1 + per-class recall, not accuracy alone</td>
+</tr>
+<tr class="odd">
+<td>R3</td>
+<td>Clinical context: distressed messages must not be missed</td>
+<td>Negative-class <strong>recall</strong> is the priority metric</td>
+</tr>
+<tr class="even">
+<td>R4</td>
+<td>Deployment on a budget (Render + HF Inference)</td>
+<td>Model size + inference time matter</td>
+</tr>
+<tr class="odd">
+<td>R5</td>
+<td>Short, informal, noisy messages (WhatsApp-style)</td>
+<td>Model must handle 3–20 token messages without dilution</td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="candidates" class="level2">
+<h2 class="anchored" data-anchor-id="candidates">Candidates</h2>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 33%">
+<col style="width: 33%">
+<col style="width: 33%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Model</th>
+<th>Role in comparison</th>
+<th>Params</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>XLM-RoBERTa-base</td>
+<td>Generalist multilingual heavyweight (our pick)</td>
+<td>278M</td>
+</tr>
+<tr class="even">
+<td>mBERT-base</td>
+<td>The older multilingual baseline</td>
+<td>178M</td>
+</tr>
+<tr class="odd">
+<td>IndoBERT-base-p1</td>
+<td>Regional specialist (Indonesian/Malay)</td>
+<td>124M</td>
+</tr>
+<tr class="even">
+<td>DistilBERT-multilingual</td>
+<td>Efficiency baseline</td>
+<td>135M</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Hypothesis:</strong> XLM-R wins on mixed rojak messages; IndoBERT may win on pure formal Malay. The per-message breakdown is the interesting finding — which is exactly what the evaluation is for.</p>
+</section>
+</section>
+<section id="data" class="level1">
+<h1>Data</h1>
+<p>Source: 2,171 labeled WhatsApp messages (pos/neg/neutral) from the autism therapy domain. Same split (seed=42) for every model — a comparison is only fair if all candidates see identical train/test folds.</p>
+</section>
+<section id="setup" class="level1 unnumbered">
+<h1 class="unnumbered">Setup</h1>
+<div id="setup" class="cell" data-context="setup" data-execution_count="1">
+<details class="code-fold">
+<summary>Code</summary>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb1"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> warnings</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>warnings.filterwarnings(<span class="st">"ignore"</span>)</span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> os, sys, time</span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> numpy <span class="im">as</span> np</span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> pandas <span class="im">as</span> pd</span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> matplotlib.pyplot <span class="im">as</span> plt</span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> pathlib <span class="im">import</span> Path</span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> sklearn.metrics <span class="im">import</span> (</span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>    accuracy_score, f1_score, precision_score, recall_score,</span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a>    confusion_matrix, ConfusionMatrixDisplay, classification_report,</span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a><span class="co"># --- Production pipeline access -------------------------------------------</span></span>
+<span id="cb1-15"><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a><span class="co"># We import the REAL cleaner from the Sentiri codebase, not a copy.</span></span>
+<span id="cb1-16"><a href="#cb1-16" aria-hidden="true" tabindex="-1"></a><span class="co"># This is the same code the Django server runs — so the evaluation measures</span></span>
+<span id="cb1-17"><a href="#cb1-17" aria-hidden="true" tabindex="-1"></a><span class="co"># the production pipeline, not a notebook re-implementation (no train/serve skew).</span></span>
+<span id="cb1-18"><a href="#cb1-18" aria-hidden="true" tabindex="-1"></a>SENTIRI_ROOT <span class="op">=</span> Path(<span class="st">"/Users/apple/degree/finalyearengineredo"</span>)</span>
+<span id="cb1-19"><a href="#cb1-19" aria-hidden="true" tabindex="-1"></a>os.environ.setdefault(<span class="st">"DJANGO_SETTINGS_MODULE"</span>, <span class="st">"finalyearengineredo.settings"</span>)</span>
+<span id="cb1-20"><a href="#cb1-20" aria-hidden="true" tabindex="-1"></a>sys.path.insert(<span class="dv">0</span>, <span class="bu">str</span>(SENTIRI_ROOT))</span>
+<span id="cb1-21"><a href="#cb1-21" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-22"><a href="#cb1-22" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> django</span>
+<span id="cb1-23"><a href="#cb1-23" aria-hidden="true" tabindex="-1"></a>django.setup()</span>
+<span id="cb1-24"><a href="#cb1-24" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-25"><a href="#cb1-25" aria-hidden="true" tabindex="-1"></a>DATA <span class="op">=</span> SENTIRI_ROOT <span class="op">/</span> <span class="st">"chat_analyzer/data/labeled_data/labeledsentimentdatatwo_balanced.csv"</span></span>
+<span id="cb1-26"><a href="#cb1-26" aria-hidden="true" tabindex="-1"></a>LABELS <span class="op">=</span> {<span class="dv">0</span>: <span class="st">"negative"</span>, <span class="dv">1</span>: <span class="st">"neutral"</span>, <span class="dv">2</span>: <span class="st">"positive"</span>}</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</details>
+</div>
+</section>
+<section id="the-cleaning-pipeline-what-the-model-actually-sees" class="level1">
+<h1>The cleaning pipeline (what the model actually sees)</h1>
+<p>The production pipeline cleans every message through <code>MalayTextCleaner</code> before it reaches any model. Two different cleaning profiles exist, because the two downstream tasks need different text:</p>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 33%">
+<col style="width: 33%">
+<col style="width: 33%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Profile</th>
+<th>What it keeps</th>
+<th>Why</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><code>clean_for_sentiment</code></td>
+<td>negation words (<em>tak, x, bukan</em>), sentiment-bearing tokens</td>
+<td>Negation flips sentiment — removing <em>tak</em> turns “tak nak” into “nak”</td>
+</tr>
+<tr class="even">
+<td><code>clean_for_topic_modeling</code></td>
+<td>domain words, stems</td>
+<td>Topic modeling needs dense topical signal; stopwords are noise</td>
+</tr>
+</tbody>
+</table>
+<p>Shared layers in <code>_base_clean</code> (both profiles inherit): normalizer → typo/slang mapping → emoji conversion → <strong>PII removal (person names + honorifics, before steming)</strong> → curse filtering.</p>
+<section id="the-lexicon-files-the-cleaners-knowledge-base" class="level2">
+<h2 class="anchored" data-anchor-id="the-lexicon-files-the-cleaners-knowledge-base">The lexicon files (the cleaner’s knowledge base)</h2>
+<p>The cleaner is rules + data. The <em>code</em> is ~450 lines; the <em>knowledge</em> lives in 12 curated data files under <code>chat_analyzer/data/</code>. This is deliberate: domain experts (admin) can improve the pipeline by editing data, not code.</p>
+<div class="cell" data-tbl-cap="Curated lexicon files backing the cleaning pipeline" data-execution_count="2">
+<details class="code-fold">
+<summary>Code</summary>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb2"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> json</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>DATA_DIR <span class="op">=</span> SENTIRI_ROOT <span class="op">/</span> <span class="st">"chat_analyzer/data"</span></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> count_entries(path):</span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> path.suffix <span class="op">==</span> <span class="st">".json"</span>:</span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span> <span class="bu">len</span>(json.load(<span class="bu">open</span>(path)))</span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> <span class="bu">sum</span>(<span class="dv">1</span> <span class="cf">for</span> line <span class="kw">in</span> <span class="bu">open</span>(path, encoding<span class="op">=</span><span class="st">"utf-8"</span>)</span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a>               <span class="cf">if</span> line.strip() <span class="kw">and</span> <span class="kw">not</span> line.strip().startswith(<span class="st">"#"</span>))</span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a>lexicon_files <span class="op">=</span> [</span>
+<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a>    (<span class="st">"typo_mapping.json"</span>,       <span class="st">"Typo corrections (raw → correct form)"</span>),</span>
+<span id="cb2-12"><a href="#cb2-12" aria-hidden="true" tabindex="-1"></a>    (<span class="st">"slang_mapping.json"</span>,      <span class="st">"Chat slang / abbreviations (mkn → makan, x nk → tak nak)"</span>),</span>
+<span id="cb2-13"><a href="#cb2-13" aria-hidden="true" tabindex="-1"></a>    (<span class="st">"emoji_mapping.json"</span>,      <span class="st">"Emoji → sentiment word conversion"</span>),</span>
+<span id="cb2-14"><a href="#cb2-14" aria-hidden="true" tabindex="-1"></a>    (<span class="st">"root_mapping.json"</span>,       <span class="st">"Irregular root word mapping"</span>),</span>
+<span id="cb2-15"><a href="#cb2-15" aria-hidden="true" tabindex="-1"></a>    (<span class="st">"english_to_malay.json"</span>,   <span class="st">"English → Malay translation (topic path)"</span>),</span>
+<span id="cb2-16"><a href="#cb2-16" aria-hidden="true" tabindex="-1"></a>    (<span class="st">"stopwords_malay.txt"</span>,     <span class="st">"Base Malay stopwords"</span>),</span>
+<span id="cb2-17"><a href="#cb2-17" aria-hidden="true" tabindex="-1"></a>    (<span class="st">"sentiment_stopwords.txt"</span>, <span class="st">"LIGHT stopwords — sentiment path keeps negation words"</span>),</span>
+<span id="cb2-18"><a href="#cb2-18" aria-hidden="true" tabindex="-1"></a>    (<span class="st">"topic_stopwords.txt"</span>,     <span class="st">"HEAVY stopwords — topic path strips aggressively"</span>),</span>
+<span id="cb2-19"><a href="#cb2-19" aria-hidden="true" tabindex="-1"></a>    (<span class="st">"domain_words_topic.txt"</span>,  <span class="st">"Therapy domain terms to KEEP (topic path)"</span>),</span>
+<span id="cb2-20"><a href="#cb2-20" aria-hidden="true" tabindex="-1"></a>    (<span class="st">"domain_words_sentiment.txt"</span>, <span class="st">"Sentiment-bearing terms to KEEP (sentiment path)"</span>),</span>
+<span id="cb2-21"><a href="#cb2-21" aria-hidden="true" tabindex="-1"></a>    (<span class="st">"person_names.txt"</span>,        <span class="st">"PII blocklist: client/staff names + honorifics (removed before stemming)"</span>),</span>
+<span id="cb2-22"><a href="#cb2-22" aria-hidden="true" tabindex="-1"></a>]</span>
+<span id="cb2-23"><a href="#cb2-23" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-24"><a href="#cb2-24" aria-hidden="true" tabindex="-1"></a>pd.DataFrame(</span>
+<span id="cb2-25"><a href="#cb2-25" aria-hidden="true" tabindex="-1"></a>    [(name, count_entries(DATA_DIR <span class="op">/</span> name), desc) <span class="cf">for</span> name, desc <span class="kw">in</span> lexicon_files],</span>
+<span id="cb2-26"><a href="#cb2-26" aria-hidden="true" tabindex="-1"></a>    columns<span class="op">=</span>[<span class="st">"File"</span>, <span class="st">"Entries"</span>, <span class="st">"Purpose"</span>],</span>
+<span id="cb2-27"><a href="#cb2-27" aria-hidden="true" tabindex="-1"></a>).set_index(<span class="st">"File"</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</details>
+<div id="lexicon-inventory" class="cell-output cell-output-display" data-execution_count="2">
+<div>
+
+
+<table class="dataframe caption-top table table-sm table-striped small" data-border="1">
+<caption>Curated lexicon files backing the cleaning pipeline</caption>
+<thead>
+<tr class="header">
+<th data-quarto-table-cell-role="th"></th>
+<th data-quarto-table-cell-role="th">Entries</th>
+<th data-quarto-table-cell-role="th">Purpose</th>
+</tr>
+<tr class="even">
+<th data-quarto-table-cell-role="th">File</th>
+<th data-quarto-table-cell-role="th"></th>
+<th data-quarto-table-cell-role="th"></th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<th data-quarto-table-cell-role="th">typo_mapping.json</th>
+<td>40</td>
+<td>Typo corrections (raw → correct form)</td>
+</tr>
+<tr class="even">
+<th data-quarto-table-cell-role="th">slang_mapping.json</th>
+<td>31</td>
+<td>Chat slang / abbreviations (mkn → makan, x nk ...</td>
+</tr>
+<tr class="odd">
+<th data-quarto-table-cell-role="th">emoji_mapping.json</th>
+<td>42</td>
+<td>Emoji → sentiment word conversion</td>
+</tr>
+<tr class="even">
+<th data-quarto-table-cell-role="th">root_mapping.json</th>
+<td>4</td>
+<td>Irregular root word mapping</td>
+</tr>
+<tr class="odd">
+<th data-quarto-table-cell-role="th">english_to_malay.json</th>
+<td>3</td>
+<td>English → Malay translation (topic path)</td>
+</tr>
+<tr class="even">
+<th data-quarto-table-cell-role="th">stopwords_malay.txt</th>
+<td>33</td>
+<td>Base Malay stopwords</td>
+</tr>
+<tr class="odd">
+<th data-quarto-table-cell-role="th">sentiment_stopwords.txt</th>
+<td>2901</td>
+<td>LIGHT stopwords — sentiment path keeps negatio...</td>
+</tr>
+<tr class="even">
+<th data-quarto-table-cell-role="th">topic_stopwords.txt</th>
+<td>1530</td>
+<td>HEAVY stopwords — topic path strips aggressively</td>
+</tr>
+<tr class="odd">
+<th data-quarto-table-cell-role="th">domain_words_topic.txt</th>
+<td>1376</td>
+<td>Therapy domain terms to KEEP (topic path)</td>
+</tr>
+<tr class="even">
+<th data-quarto-table-cell-role="th">domain_words_sentiment.txt</th>
+<td>813</td>
+<td>Sentiment-bearing terms to KEEP (sentiment path)</td>
+</tr>
+<tr class="odd">
+<th data-quarto-table-cell-role="th">person_names.txt</th>
+<td>58</td>
+<td>PII blocklist: client/staff names + honorifics...</td>
+</tr>
+</tbody>
+</table>
+
+</div>
+</div>
+</div>
+</section>
+<section id="before-after-on-real-messages" class="level2">
+<h2 class="anchored" data-anchor-id="before-after-on-real-messages">Before / after on real messages</h2>
+<div id="cell-cleaning-demo" class="cell" data-execution_count="3">
+<details class="code-fold">
+<summary>Code</summary>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb3"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> json</span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> chat_analyzer.services.text_cleaner <span class="im">import</span> clean_for_sentiment, clean_for_topic_modeling</span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>demo <span class="op">=</span> [</span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a>    <span class="st">"Puan Aina kata affan tidur lewat semalam 😴 x nk mkn nasi"</span>,</span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a>    <span class="st">"syukur alhamdulillah hari ni ammar dah boleh duduk diam2 dlm kelas"</span>,</span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a>]</span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a>pd.DataFrame({</span>
+<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a>    <span class="st">"raw"</span>: demo,</span>
+<span id="cb3-10"><a href="#cb3-10" aria-hidden="true" tabindex="-1"></a>    <span class="st">"sentiment_input"</span>: [clean_for_sentiment(t) <span class="cf">for</span> t <span class="kw">in</span> demo],</span>
+<span id="cb3-11"><a href="#cb3-11" aria-hidden="true" tabindex="-1"></a>    <span class="st">"topic_input"</span>: [clean_for_topic_modeling(t) <span class="cf">for</span> t <span class="kw">in</span> demo],</span>
+<span id="cb3-12"><a href="#cb3-12" aria-hidden="true" tabindex="-1"></a>})</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</details>
+<div id="cleaning-demo" class="cell-output cell-output-display" data-execution_count="3">
+<div>
+
+
+<table class="dataframe caption-top table table-sm table-striped small" data-border="1">
+<thead>
+<tr class="header">
+<th data-quarto-table-cell-role="th"></th>
+<th data-quarto-table-cell-role="th">raw</th>
+<th data-quarto-table-cell-role="th">sentiment_input</th>
+<th data-quarto-table-cell-role="th">topic_input</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<th data-quarto-table-cell-role="th">0</th>
+<td>Puan Aina kata affan tidur lewat semalam 😴 x n...</td>
+<td>kata tidur lewat semalam tak nak makan nasi</td>
+<td>kata tidur lewat makan nasi</td>
+</tr>
+<tr class="even">
+<th data-quarto-table-cell-role="th">1</th>
+<td>syukur alhamdulillah hari ni ammar dah boleh d...</td>
+<td>syukur hari dah boleh duduk diam2 kelas</td>
+<td>syukur duduk diam2 kelas</td>
+</tr>
+</tbody>
+</table>
+
+</div>
+</div>
+</div>
+</section>
+</section>
+<section id="part-1-why-not-a-lexicon-approach" class="level1">
+<h1>Part 1 — Why not a lexicon approach?</h1>
+<p>The initial direction (suggested by our lecturer) was a <strong>lexicon-based</strong> sentiment analyzer: score each message by looking up its words in a sentiment dictionary. We investigated and rejected this approach — for three evidence-backed reasons.</p>
+<section id="the-resource-gap-weaker-argument" class="level2">
+<h2 class="anchored" data-anchor-id="the-resource-gap-weaker-argument">1.1 The resource gap (weaker argument)</h2>
+<p>Malay has <strong>no maintained, ready-to-use sentiment lexicon</strong> — nothing comparable to English’s VADER, SentiWordNet, or AFINN that one can download and run today. What exists are <em>induction methods</em> in research papers (Omar et al.&nbsp;2017 maps WordNet Bahasa onto English SentiWordNet; cross-lingual synset-mapping experiments exist), whose outputs are not published as reusable artifacts. This is a real but recoverable obstacle — one could build a domain lexicon — so it alone does not justify abandoning the approach. The decisive arguments follow.</p>
+</section>
+<section id="contextual-polarity-flips-the-measured-failure-mode" class="level2">
+<h2 class="anchored" data-anchor-id="contextual-polarity-flips-the-measured-failure-mode">1.2 Contextual polarity flips — the measured failure mode</h2>
+<p>A lexicon assigns each word a <strong>prior polarity</strong> (dictionary meaning). But words carry their <strong>contextual polarity</strong> from the sentence. In therapy-progress chats, this gap is not an edge case — we measured it:</p>
+<div id="cell-lexicon-traps" class="cell" data-tbl-cap="Negative-labeled messages that contain dictionary-positive words" data-execution_count="4">
+<details class="code-fold">
+<summary>Code</summary>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb4"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a>df_raw <span class="op">=</span> pd.read_csv(DATA)</span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>POS_WORDS <span class="op">=</span> [<span class="st">"bagus"</span>, <span class="st">"baik"</span>, <span class="st">"gembira"</span>, <span class="st">"syukur"</span>, <span class="st">"senang"</span>, <span class="st">"best"</span>,</span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a>             <span class="st">"pandai"</span>, <span class="st">"bijak"</span>, <span class="st">"boleh"</span>, <span class="st">"suka"</span>, <span class="st">"terer"</span>, <span class="st">"hebat"</span>]</span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a>pattern <span class="op">=</span> <span class="st">"|"</span>.join(POS_WORDS)</span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a>traps <span class="op">=</span> df_raw[(df_raw[<span class="st">"label"</span>] <span class="op">==</span> <span class="dv">0</span>)</span>
+<span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a>               <span class="op">&amp;</span> (df_raw[<span class="st">"text"</span>].<span class="bu">str</span>.lower().<span class="bu">str</span>.contains(pattern, na<span class="op">=</span><span class="va">False</span>))]</span>
+<span id="cb4-9"><a href="#cb4-9" aria-hidden="true" tabindex="-1"></a>n_neg <span class="op">=</span> (df_raw[<span class="st">"label"</span>] <span class="op">==</span> <span class="dv">0</span>).<span class="bu">sum</span>()</span>
+<span id="cb4-10"><a href="#cb4-10" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="ss">f"Negative messages containing a positive-looking word: "</span></span>
+<span id="cb4-11"><a href="#cb4-11" aria-hidden="true" tabindex="-1"></a>      <span class="ss">f"</span><span class="sc">{</span><span class="bu">len</span>(traps)<span class="sc">}</span><span class="ss"> / </span><span class="sc">{</span>n_neg<span class="sc">}</span><span class="ss"> (</span><span class="sc">{</span><span class="dv">100</span><span class="op">*</span><span class="bu">len</span>(traps)<span class="op">/</span>n_neg<span class="sc">:.1f}</span><span class="ss">%)"</span>)</span>
+<span id="cb4-12"><a href="#cb4-12" aria-hidden="true" tabindex="-1"></a>traps[<span class="st">"text"</span>].head(<span class="dv">12</span>).tolist()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</details>
+<div class="cell-output cell-output-stdout">
+<pre><code>Negative messages containing a positive-looking word: 99 / 744 (13.3%)</code></pre>
+</div>
+<div id="lexicon-traps" class="cell-output cell-output-display" data-execution_count="4">
+<pre><code>['semua ini dapat bertahan dalam 30-40 minit, selepas itu, affan akan tak senang duduk dan suruh buka.',
+ 'sebelum masuk terapi merangkak pun tak boleh.',
+ 'ammar boleh membaca tetapi tidak boleh berinteraksi sebelum ini.',
+ 'dia selalu sedih dan suka marah, merajuk.',
+ 'sebelum ini ammar hanya boleh membaca tapi tak boleh berinteraksi dua hala dengan kami.',
+ 'cuma pergerakkan dia masih tak boleh control.',
+ 'sebelum masuk terapi merangkak pun tak boleh.',
+ 'sebelum masuk terapi merangkak pun tak boleh.',
+ 'sebelum masuk terapi merangkak pun tak boleh.',
+ 'kekadang boleh divert attention dia untuk lengkapkan sejam, adakala dia akan nangis sampai buka balutan, adakala pada masa awal-awal tu buka saja balutan bila dia nangis lama sangat.',
+ 'semua ini dapat bertahan dalam 30-40 minit, selepas itu, affan akan tak senang duduk dan suruh buka.',
+ 'dia selalu sedih dan suka marah, merajuk.']</code></pre>
+</div>
+</div>
+<p>The recurring patterns in these messages — the <em>reasons</em> word-level lookup fails:</p>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 33%">
+<col style="width: 33%">
+<col style="width: 33%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Trap</th>
+<th>Example from our data</th>
+<th>Why a lexicon cannot see it</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><strong>Negation</strong></td>
+<td>“merangkak pun <strong>tak boleh</strong>”</td>
+<td><em>boleh</em> scores positive; the <em>tak</em> before it flips the phrase. Lexicons score words one at a time</td>
+</tr>
+<tr class="even">
+<td><strong>Contrastive conjunction</strong></td>
+<td>“ammar boleh membaca <strong>tetapi</strong> tidak boleh berinteraksi”</td>
+<td>First clause positive, whole sentence negative — polarity lives in the <em>contrast</em>, not any single word</td>
+</tr>
+<tr class="odd">
+<td><strong>Mixed-clause polarity</strong></td>
+<td>“dia selalu sedih dan <strong>suka</strong> marah, merajuk”</td>
+<td><em>suka</em> (“likes”) attaches to a negative behavior: “easily angered”</td>
+</tr>
+<tr class="even">
+<td><strong>Domain semantics</strong></td>
+<td>“dia masih tak boleh control”</td>
+<td>Progress-report framing makes capability words markers of <em>struggle</em> when negated</td>
+</tr>
+</tbody>
+</table>
+<p>This is the <strong>prior vs contextual polarity</strong> distinction (Wilson, Wiebe &amp; Hoffmann, 2005): lexicons capture the former, sentiment in real text is carried by the latter. A transformer reads the whole sequence and learns these flips from labeled data — including that “tidur lewat” is a complaint, not a nap report.</p>
+</section>
+<section id="lexicon-baseline-measured-not-assumed" class="level2">
+<h2 class="anchored" data-anchor-id="lexicon-baseline-measured-not-assumed">1.3 Lexicon baseline — measured, not assumed</h2>
+<p>To honor the suggestion properly, we test it rather than dismiss it. The baseline below scores messages using our curated sentiment word lists (the same domain knowledge embedded in <code>domain_words_sentiment.txt</code>) — the strongest lexicon a lexicon approach could reasonably have here.</p>
+<div id="lexicon-baseline" class="cell" data-execution_count="5">
+<details class="code-fold">
+<summary>Code</summary>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb7"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="co"># </span><span class="al">TODO</span><span class="co"> (you): implement LexiconBaseline as a fifth row of the comparison.</span></span>
+<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a><span class="co">#   1. Load positive and negative word lists (from domain_words_sentiment.txt</span></span>
+<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a><span class="co">#      or a curated pos/neg pair of lists).</span></span>
+<span id="cb7-4"><a href="#cb7-4" aria-hidden="true" tabindex="-1"></a><span class="co">#   2. Score: for each message, count positive hits minus negative hits</span></span>
+<span id="cb7-5"><a href="#cb7-5" aria-hidden="true" tabindex="-1"></a><span class="co">#      (lowercase, simple substring or token match).</span></span>
+<span id="cb7-6"><a href="#cb7-6" aria-hidden="true" tabindex="-1"></a><span class="co">#   3. DECISION (answer before coding): a message with ZERO lexicon hits gets</span></span>
+<span id="cb7-7"><a href="#cb7-7" aria-hidden="true" tabindex="-1"></a><span class="co">#      which label? Most messages are logistical smalltalk with no sentiment</span></span>
+<span id="cb7-8"><a href="#cb7-8" aria-hidden="true" tabindex="-1"></a><span class="co">#      words at all. Choose the mapping that is FAVORABLE to the baseline</span></span>
+<span id="cb7-9"><a href="#cb7-9" aria-hidden="true" tabindex="-1"></a><span class="co">#      (not a strawman) — and justify it in a comment.</span></span>
+<span id="cb7-10"><a href="#cb7-10" aria-hidden="true" tabindex="-1"></a><span class="co">#   4. Evaluate on the same test split as the neural models: accuracy, macro-F1,</span></span>
+<span id="cb7-11"><a href="#cb7-11" aria-hidden="true" tabindex="-1"></a><span class="co">#      and — the key number — its accuracy on the `traps` subset above.</span></span>
+<span id="cb7-12"><a href="#cb7-12" aria-hidden="true" tabindex="-1"></a><span class="co">#      Prediction to make before running: will the lexicon beat random on the</span></span>
+<span id="cb7-13"><a href="#cb7-13" aria-hidden="true" tabindex="-1"></a><span class="co">#      traps subset? Why or why not?</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</details>
+</div>
+</section>
+</section>
+<section id="part-2-sentiment-model-comparison" class="level1">
+<h1>Part 2 — Sentiment model comparison</h1>
+<section id="load-and-split" class="level2">
+<h2 class="anchored" data-anchor-id="load-and-split">2.1 Load and split</h2>
+<div id="cell-load-data" class="cell" data-execution_count="6">
+<details class="code-fold">
+<summary>Code</summary>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb8"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a><span class="co"># </span><span class="al">TODO</span><span class="co"> (you): load the CSV, show class distribution, train/test split seed=42 test_size=0.2</span></span>
+<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a><span class="co"># Hint: mirror fine_tune_sentiment.py's data path and split so results are comparable.</span></span>
+<span id="cb8-3"><a href="#cb8-3" aria-hidden="true" tabindex="-1"></a>df <span class="op">=</span> pd.read_csv(DATA)</span>
+<span id="cb8-4"><a href="#cb8-4" aria-hidden="true" tabindex="-1"></a>...</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</details>
+<div id="load-data" class="cell-output cell-output-display" data-execution_count="6">
+<pre><code>Ellipsis</code></pre>
+</div>
+</div>
+</section>
+<section id="fine-tune-xlm-r-the-incumbent" class="level2">
+<h2 class="anchored" data-anchor-id="fine-tune-xlm-r-the-incumbent">1.2 Fine-tune XLM-R (the incumbent)</h2>
+<div id="train-xlmr" class="cell" data-execution_count="7">
+<details class="code-fold">
+<summary>Code</summary>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb10"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a><span class="co"># </span><span class="al">TODO</span><span class="co"> (you): fine-tune xlm-roberta-base on the train split.</span></span>
+<span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a><span class="co">#   - same hyperparameters as chat_analyzer/services/fine_tune_sentiment.py</span></span>
+<span id="cb10-3"><a href="#cb10-3" aria-hidden="true" tabindex="-1"></a><span class="co">#     (so this notebook reproduces the production model)</span></span>
+<span id="cb10-4"><a href="#cb10-4" aria-hidden="true" tabindex="-1"></a><span class="co">#   - record: per-class precision/recall/F1 on test, macro-F1, accuracy,</span></span>
+<span id="cb10-5"><a href="#cb10-5" aria-hidden="true" tabindex="-1"></a><span class="co">#     train time, params count</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</details>
+</div>
+</section>
+<section id="baselines-mbert-indobert-distilbert" class="level2">
+<h2 class="anchored" data-anchor-id="baselines-mbert-indobert-distilbert">1.3 Baselines: mBERT, IndoBERT, DistilBERT</h2>
+<div id="train-baselines" class="cell" data-execution_count="8">
+<details class="code-fold">
+<summary>Code</summary>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb11"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a><span class="co"># </span><span class="al">TODO</span><span class="co"> (you): same recipe (epochs, lr, batch size) for each baseline.</span></span>
+<span id="cb11-2"><a href="#cb11-2" aria-hidden="true" tabindex="-1"></a><span class="co">#   FAIRNESS RULE: only the checkpoint changes; everything else identical.</span></span>
+<span id="cb11-3"><a href="#cb11-3" aria-hidden="true" tabindex="-1"></a><span class="co">#   That's what makes "XLM-R beat mBERT by X points" a defensible claim.</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</details>
+</div>
+</section>
+<section id="metrics-matrix" class="level2">
+<h2 class="anchored" data-anchor-id="metrics-matrix">1.4 Metrics matrix</h2>
+<div id="metrics-matrix" class="cell" data-execution_count="9">
+<details class="code-fold">
+<summary>Code</summary>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb12"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a><span class="co"># </span><span class="al">TODO</span><span class="co"> (you): build a results DataFrame: model × {accuracy, macro-F1,</span></span>
+<span id="cb12-2"><a href="#cb12-2" aria-hidden="true" tabindex="-1"></a><span class="co">#   per-class P/R/F1, negative recall (clinical priority), train time,</span></span>
+<span id="cb12-3"><a href="#cb12-3" aria-hidden="true" tabindex="-1"></a><span class="co">#   params}. Display as a styled Quarto table.</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</details>
+</div>
+</section>
+<section id="confusion-matrices" class="level2">
+<h2 class="anchored" data-anchor-id="confusion-matrices">1.5 Confusion matrices</h2>
+<div id="confusion" class="cell" data-execution_count="10">
+<details class="code-fold">
+<summary>Code</summary>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb13"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a><span class="co"># </span><span class="al">TODO</span><span class="co"> (you): 2×2 grid of confusion matrices, one per model.</span></span>
+<span id="cb13-2"><a href="#cb13-2" aria-hidden="true" tabindex="-1"></a><span class="co">#   Question to answer from the picture: WHERE does each model lose?</span></span>
+<span id="cb13-3"><a href="#cb13-3" aria-hidden="true" tabindex="-1"></a><span class="co">#   (e.g. does mBERT confuse neutral↔positive on rojak messages?)</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</details>
+</div>
+</section>
+<section id="rq-breakdown-rojak-vs-pure-malay" class="level2">
+<h2 class="anchored" data-anchor-id="rq-breakdown-rojak-vs-pure-malay">1.6 RQ breakdown: rojak vs pure Malay</h2>
+<div id="rojak-breakdown" class="cell" data-execution_count="11">
+<details class="code-fold">
+<summary>Code</summary>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb14"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb14-1"><a href="#cb14-1" aria-hidden="true" tabindex="-1"></a><span class="co"># </span><span class="al">TODO</span><span class="co"> (you): classify test messages as rojak (contains English tokens)</span></span>
+<span id="cb14-2"><a href="#cb14-2" aria-hidden="true" tabindex="-1"></a><span class="co">#   vs pure Malay; compute per-group accuracy for each model.</span></span>
+<span id="cb14-3"><a href="#cb14-3" aria-hidden="true" tabindex="-1"></a><span class="co">#   This is the section that directly tests the hypothesis and answers "why XLM-R".</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</details>
+</div>
+</section>
+<section id="decision" class="level2">
+<h2 class="anchored" data-anchor-id="decision">1.7 Decision</h2>
+<div id="decision-sentiment" class="cell" data-execution_count="12">
+<details class="code-fold">
+<summary>Code</summary>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb15"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb15-1"><a href="#cb15-1" aria-hidden="true" tabindex="-1"></a><span class="co"># </span><span class="al">TODO</span><span class="co"> (you): summarize — which model wins which requirement (R1-R5)?</span></span>
+<span id="cb15-2"><a href="#cb15-2" aria-hidden="true" tabindex="-1"></a><span class="co">#   If XLM-R wins: quantify by how much. If a baseline ties: say so honestly.</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</details>
+</div>
+</section>
+</section>
+<section id="part-3-why-bertopic" class="level1">
+<h1>Part 3 — Why BERTopic?</h1>
+<div id="topic-setup" class="cell" data-execution_count="13">
+<details class="code-fold">
+<summary>Code</summary>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb16"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb16-1"><a href="#cb16-1" aria-hidden="true" tabindex="-1"></a><span class="co"># </span><span class="al">TODO</span><span class="co"> (you): the topic-modeling defense is different from sentiment's.</span></span>
+<span id="cb16-2"><a href="#cb16-2" aria-hidden="true" tabindex="-1"></a><span class="co">#   Sentiment has labels → supervised comparison. Topic modeling has NO labels</span></span>
+<span id="cb16-3"><a href="#cb16-3" aria-hidden="true" tabindex="-1"></a><span class="co">#   → the justification is architectural:</span></span>
+<span id="cb16-4"><a href="#cb16-4" aria-hidden="true" tabindex="-1"></a><span class="co">#     1. Why topic modeling at all (vs. keyword rules alone) — the 88 ambiguous</span></span>
+<span id="cb16-5"><a href="#cb16-5" aria-hidden="true" tabindex="-1"></a><span class="co">#        messages that rules couldn't decide (Run 7/8 evidence)</span></span>
+<span id="cb16-6"><a href="#cb16-6" aria-hidden="true" tabindex="-1"></a><span class="co">#     2. Why BERTopic specifically:</span></span>
+<span id="cb16-7"><a href="#cb16-7" aria-hidden="true" tabindex="-1"></a><span class="co">#        - transformer embeddings = semantics, not string matching</span></span>
+<span id="cb16-8"><a href="#cb16-8" aria-hidden="true" tabindex="-1"></a><span class="co">#          (the 'tidur' → Sleep Patterns win in Run 8c)</span></span>
+<span id="cb16-9"><a href="#cb16-9" aria-hidden="true" tabindex="-1"></a><span class="co">#        - UMAP+HDBSCAN = density clustering that allows outliers (-1)</span></span>
+<span id="cb16-10"><a href="#cb16-10" aria-hidden="true" tabindex="-1"></a><span class="co">#          vs k-means forcing every point into a cluster</span></span>
+<span id="cb16-11"><a href="#cb16-11" aria-hidden="true" tabindex="-1"></a><span class="co">#        - c-TF-IDF = interpretable topic names (admin can promote/review)</span></span>
+<span id="cb16-12"><a href="#cb16-12" aria-hidden="true" tabindex="-1"></a><span class="co">#        - hybrid pipeline: coverage override + cluster inheritance + fallback</span></span>
+<span id="cb16-13"><a href="#cb16-13" aria-hidden="true" tabindex="-1"></a><span class="co">#   </span><span class="al">TODO</span><span class="co">: compute topic coherence (c_v) on the trained model as the quantitative</span></span>
+<span id="cb16-14"><a href="#cb16-14" aria-hidden="true" tabindex="-1"></a><span class="co">#   evidence, plus cluster size distribution chart.</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</details>
+</div>
+</section>
+<section id="conclusion" class="level1">
+<h1>Conclusion</h1>
+<p>TODO: the one-breath viva answer, backed by the numbers above.</p>
+<section id="references" class="level2 unnumbered">
+<h2 class="unnumbered anchored" data-anchor-id="references">References</h2>
+<ul>
+<li>Conneau et al.&nbsp;(2020), <em>Unsupervised Cross-lingual Representation Learning at Scale</em> (XLM-R)</li>
+<li>Grootendorst (2022), <em>BERTopic: Neural topic modeling with a class-based TF-IDF procedure</em> (arXiv:2203.05794)</li>
+<li>Devlin et al.&nbsp;(2019), BERT; Wilkinson et al.&nbsp;(2021), IndoBERT (IndoNLU)</li>
+<li>Sanh et al.&nbsp;(2019), DistilBERT</li>
+<li>Wilson, Wiebe &amp; Hoffmann (2005), <em>Recognizing Contextual Polarity in Phrase-Level Sentiment Analysis</em>, HLT/EMNLP — prior vs contextual polarity</li>
+<li>Omar et al.&nbsp;(2017), <em>Minimally-Supervised Sentiment Lexicon Induction Model: A Case Study of Malay Sentiment Analysis</em>, Springer — state of Malay lexicon resources</li>
+<li>Noor, Sapuan &amp; Bond (2011), <em>WordNet Bahasa</em> — Malay semantic network (not a sentiment lexicon)</li>
+</ul>
+<!-- -->
+
+</section>
+</section>
+
+</main>
+<!-- /main column -->
+<script id="quarto-html-after-body" type="application/javascript">
+  window.document.addEventListener("DOMContentLoaded", function (event) {
+    const icon = "";
+    const anchorJS = new window.AnchorJS();
+    anchorJS.options = {
+      placement: 'right',
+      icon: icon
+    };
+    anchorJS.add('.anchored');
+    const isCodeAnnotation = (el) => {
+      for (const clz of el.classList) {
+        if (clz.startsWith('code-annotation-')) {                     
+          return true;
+        }
+      }
+      return false;
+    }
+    const onCopySuccess = function(e) {
+      // button target
+      const button = e.trigger;
+      // don't keep focus
+      button.blur();
+      // flash "checked"
+      button.classList.add('code-copy-button-checked');
+      var currentTitle = button.getAttribute("title");
+      button.setAttribute("title", "Copied!");
+      let tooltip;
+      if (window.bootstrap) {
+        button.setAttribute("data-bs-toggle", "tooltip");
+        button.setAttribute("data-bs-placement", "left");
+        button.setAttribute("data-bs-title", "Copied!");
+        tooltip = new bootstrap.Tooltip(button, 
+          { trigger: "manual", 
+            customClass: "code-copy-button-tooltip",
+            offset: [0, -8]});
+        tooltip.show();    
+      }
+      setTimeout(function() {
+        if (tooltip) {
+          tooltip.hide();
+          button.removeAttribute("data-bs-title");
+          button.removeAttribute("data-bs-toggle");
+          button.removeAttribute("data-bs-placement");
+        }
+        button.setAttribute("title", currentTitle);
+        button.classList.remove('code-copy-button-checked');
+      }, 1000);
+      // clear code selection
+      e.clearSelection();
+    }
+    const getTextToCopy = function(trigger) {
+      const outerScaffold = trigger.parentElement.cloneNode(true);
+      const codeEl = outerScaffold.querySelector('code');
+      for (const childEl of codeEl.children) {
+        if (isCodeAnnotation(childEl)) {
+          childEl.remove();
+        }
+      }
+      return codeEl.innerText;
+    }
+    const clipboard = new window.ClipboardJS('.code-copy-button:not([data-in-quarto-modal])', {
+      text: getTextToCopy
+    });
+    clipboard.on('success', onCopySuccess);
+    if (window.document.getElementById('quarto-embedded-source-code-modal')) {
+      const clipboardModal = new window.ClipboardJS('.code-copy-button[data-in-quarto-modal]', {
+        text: getTextToCopy,
+        container: window.document.getElementById('quarto-embedded-source-code-modal')
+      });
+      clipboardModal.on('success', onCopySuccess);
+    }
+    const viewSource = window.document.getElementById('quarto-view-source') ||
+                       window.document.getElementById('quarto-code-tools-source');
+    if (viewSource) {
+      const sourceUrl = viewSource.getAttribute("data-quarto-source-url");
+      viewSource.addEventListener("click", function(e) {
+        if (sourceUrl) {
+          // rstudio viewer pane
+          if (/\bcapabilities=\b/.test(window.location)) {
+            window.open(sourceUrl);
+          } else {
+            window.location.href = sourceUrl;
+          }
+        } else {
+          const modal = new bootstrap.Modal(document.getElementById('quarto-embedded-source-code-modal'));
+          modal.show();
+        }
+        return false;
+      });
+    }
+    function toggleCodeHandler(show) {
+      return function(e) {
+        const cellDetails = window.document.querySelectorAll(".cell details.code-fold");
+        for (let i=0; i<cellDetails.length; i++) {
+          const details = cellDetails[i];
+          if (show) {
+            details.open = true;
+          } else {
+            details.removeAttribute("open");
+          }
+        }
+        const cellCodeDivs = window.document.querySelectorAll(".cell div.sourceCode.cell-code");
+        const fromCls = show ? "hidden" : "unhidden";
+        const toCls = show ? "unhidden" : "hidden";
+        for (let i=0; i<cellCodeDivs.length; i++) {
+          const codeDiv = cellCodeDivs[i];
+          if (codeDiv.classList.contains(fromCls)) {
+            codeDiv.classList.remove(fromCls);
+            codeDiv.classList.add(toCls);
+          } 
+        }
+        return false;
+      }
+    }
+    const hideAllCode = window.document.getElementById("quarto-hide-all-code");
+    if (hideAllCode) {
+      hideAllCode.addEventListener("click", toggleCodeHandler(false));
+    }
+    const showAllCode = window.document.getElementById("quarto-show-all-code");
+    if (showAllCode) {
+      showAllCode.addEventListener("click", toggleCodeHandler(true));
+    }
+      var localhostRegex = new RegExp(/^(?:http|https):\/\/localhost\:?[0-9]*\//);
+      var mailtoRegex = new RegExp(/^mailto:/);
+        var filterRegex = new RegExp('/' + window.location.host + '/');
+      var isInternal = (href) => {
+          return filterRegex.test(href) || localhostRegex.test(href) || mailtoRegex.test(href);
+      }
+      // Inspect non-navigation links and adorn them if external
+     var links = window.document.querySelectorAll('a[href]:not(.nav-link):not(.navbar-brand):not(.toc-action):not(.sidebar-link):not(.sidebar-item-toggle):not(.pagination-link):not(.no-external):not([aria-hidden]):not(.dropdown-item):not(.quarto-navigation-tool):not(.about-link)');
+      for (var i=0; i<links.length; i++) {
+        const link = links[i];
+        if (!isInternal(link.href)) {
+          // undo the damage that might have been done by quarto-nav.js in the case of
+          // links that we want to consider external
+          if (link.dataset.originalHref !== undefined) {
+            link.href = link.dataset.originalHref;
+          }
+        }
+      }
+    function tippyHover(el, contentFn, onTriggerFn, onUntriggerFn) {
+      const config = {
+        allowHTML: true,
+        maxWidth: 500,
+        delay: 100,
+        arrow: false,
+        appendTo: function(el) {
+            return el.parentElement;
+        },
+        interactive: true,
+        interactiveBorder: 10,
+        theme: 'quarto',
+        placement: 'bottom-start',
+      };
+      if (contentFn) {
+        config.content = contentFn;
+      }
+      if (onTriggerFn) {
+        config.onTrigger = onTriggerFn;
+      }
+      if (onUntriggerFn) {
+        config.onUntrigger = onUntriggerFn;
+      }
+      window.tippy(el, config); 
+    }
+    const noterefs = window.document.querySelectorAll('a[role="doc-noteref"]');
+    for (var i=0; i<noterefs.length; i++) {
+      const ref = noterefs[i];
+      tippyHover(ref, function() {
+        // use id or data attribute instead here
+        let href = ref.getAttribute('data-footnote-href') || ref.getAttribute('href');
+        try { href = new URL(href).hash; } catch {}
+        const id = href.replace(/^#\/?/, "");
+        const note = window.document.getElementById(id);
+        if (note) {
+          return note.innerHTML;
+        } else {
+          return "";
+        }
+      });
+    }
+    const xrefs = window.document.querySelectorAll('a.quarto-xref');
+    const processXRef = (id, note) => {
+      // Strip column container classes
+      const stripColumnClz = (el) => {
+        el.classList.remove("page-full", "page-columns");
+        if (el.children) {
+          for (const child of el.children) {
+            stripColumnClz(child);
+          }
+        }
+      }
+      stripColumnClz(note)
+      if (id === null || id.startsWith('sec-')) {
+        // Special case sections, only their first couple elements
+        const container = document.createElement("div");
+        if (note.children && note.children.length > 2) {
+          container.appendChild(note.children[0].cloneNode(true));
+          for (let i = 1; i < note.children.length; i++) {
+            const child = note.children[i];
+            if (child.tagName === "P" && child.innerText === "") {
+              continue;
+            } else {
+              container.appendChild(child.cloneNode(true));
+              break;
+            }
+          }
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(container);
+          }
+          return container.innerHTML
+        } else {
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(note);
+          }
+          return note.innerHTML;
+        }
+      } else {
+        // Remove any anchor links if they are present
+        const anchorLink = note.querySelector('a.anchorjs-link');
+        if (anchorLink) {
+          anchorLink.remove();
+        }
+        if (window.Quarto?.typesetMath) {
+          window.Quarto.typesetMath(note);
+        }
+        if (note.classList.contains("callout")) {
+          return note.outerHTML;
+        } else {
+          return note.innerHTML;
+        }
+      }
+    }
+    for (var i=0; i<xrefs.length; i++) {
+      const xref = xrefs[i];
+      tippyHover(xref, undefined, function(instance) {
+        instance.disable();
+        let url = xref.getAttribute('href');
+        let hash = undefined; 
+        if (url.startsWith('#')) {
+          hash = url;
+        } else {
+          try { hash = new URL(url).hash; } catch {}
+        }
+        if (hash) {
+          const id = hash.replace(/^#\/?/, "");
+          const note = window.document.getElementById(id);
+          if (note !== null) {
+            try {
+              const html = processXRef(id, note.cloneNode(true));
+              instance.setContent(html);
+            } finally {
+              instance.enable();
+              instance.show();
+            }
+          } else {
+            // See if we can fetch this
+            fetch(url.split('#')[0])
+            .then(res => res.text())
+            .then(html => {
+              const parser = new DOMParser();
+              const htmlDoc = parser.parseFromString(html, "text/html");
+              const note = htmlDoc.getElementById(id);
+              if (note !== null) {
+                const html = processXRef(id, note);
+                instance.setContent(html);
+              } 
+            }).finally(() => {
+              instance.enable();
+              instance.show();
+            });
+          }
+        } else {
+          // See if we can fetch a full url (with no hash to target)
+          // This is a special case and we should probably do some content thinning / targeting
+          fetch(url)
+          .then(res => res.text())
+          .then(html => {
+            const parser = new DOMParser();
+            const htmlDoc = parser.parseFromString(html, "text/html");
+            const note = htmlDoc.querySelector('main.content');
+            if (note !== null) {
+              // This should only happen for chapter cross references
+              // (since there is no id in the URL)
+              // remove the first header
+              if (note.children.length > 0 && note.children[0].tagName === "HEADER") {
+                note.children[0].remove();
+              }
+              const html = processXRef(null, note);
+              instance.setContent(html);
+            } 
+          }).finally(() => {
+            instance.enable();
+            instance.show();
+          });
+        }
+      }, function(instance) {
+      });
+    }
+        let selectedAnnoteEl;
+        const selectorForAnnotation = ( cell, annotation) => {
+          let cellAttr = 'data-code-cell="' + cell + '"';
+          let lineAttr = 'data-code-annotation="' +  annotation + '"';
+          const selector = 'span[' + cellAttr + '][' + lineAttr + ']';
+          return selector;
+        }
+        const selectCodeLines = (annoteEl) => {
+          const doc = window.document;
+          const targetCell = annoteEl.getAttribute("data-target-cell");
+          const targetAnnotation = annoteEl.getAttribute("data-target-annotation");
+          const annoteSpan = window.document.querySelector(selectorForAnnotation(targetCell, targetAnnotation));
+          const lines = annoteSpan.getAttribute("data-code-lines").split(",");
+          const lineIds = lines.map((line) => {
+            return targetCell + "-" + line;
+          })
+          let top = null;
+          let height = null;
+          let parent = null;
+          if (lineIds.length > 0) {
+              //compute the position of the single el (top and bottom and make a div)
+              const el = window.document.getElementById(lineIds[0]);
+              top = el.offsetTop;
+              height = el.offsetHeight;
+              parent = el.parentElement.parentElement;
+            if (lineIds.length > 1) {
+              const lastEl = window.document.getElementById(lineIds[lineIds.length - 1]);
+              const bottom = lastEl.offsetTop + lastEl.offsetHeight;
+              height = bottom - top;
+            }
+            if (top !== null && height !== null && parent !== null) {
+              // cook up a div (if necessary) and position it 
+              let div = window.document.getElementById("code-annotation-line-highlight");
+              if (div === null) {
+                div = window.document.createElement("div");
+                div.setAttribute("id", "code-annotation-line-highlight");
+                div.style.position = 'absolute';
+                parent.appendChild(div);
+              }
+              div.style.top = top - 2 + "px";
+              div.style.height = height + 4 + "px";
+              div.style.left = 0;
+              let gutterDiv = window.document.getElementById("code-annotation-line-highlight-gutter");
+              if (gutterDiv === null) {
+                gutterDiv = window.document.createElement("div");
+                gutterDiv.setAttribute("id", "code-annotation-line-highlight-gutter");
+                gutterDiv.style.position = 'absolute';
+                const codeCell = window.document.getElementById(targetCell);
+                const gutter = codeCell.querySelector('.code-annotation-gutter');
+                gutter.appendChild(gutterDiv);
+              }
+              gutterDiv.style.top = top - 2 + "px";
+              gutterDiv.style.height = height + 4 + "px";
+            }
+            selectedAnnoteEl = annoteEl;
+          }
+        };
+        const unselectCodeLines = () => {
+          const elementsIds = ["code-annotation-line-highlight", "code-annotation-line-highlight-gutter"];
+          elementsIds.forEach((elId) => {
+            const div = window.document.getElementById(elId);
+            if (div) {
+              div.remove();
+            }
+          });
+          selectedAnnoteEl = undefined;
+        };
+          // Handle positioning of the toggle
+      window.addEventListener(
+        "resize",
+        throttle(() => {
+          elRect = undefined;
+          if (selectedAnnoteEl) {
+            selectCodeLines(selectedAnnoteEl);
+          }
+        }, 10)
+      );
+      function throttle(fn, ms) {
+      let throttle = false;
+      let timer;
+        return (...args) => {
+          if(!throttle) { // first call gets through
+              fn.apply(this, args);
+              throttle = true;
+          } else { // all the others get throttled
+              if(timer) clearTimeout(timer); // cancel #2
+              timer = setTimeout(() => {
+                fn.apply(this, args);
+                timer = throttle = false;
+              }, ms);
+          }
+        };
+      }
+        // Attach click handler to the DT
+        const annoteDls = window.document.querySelectorAll('dt[data-target-cell]');
+        for (const annoteDlNode of annoteDls) {
+          annoteDlNode.addEventListener('click', (event) => {
+            const clickedEl = event.target;
+            if (clickedEl !== selectedAnnoteEl) {
+              unselectCodeLines();
+              const activeEl = window.document.querySelector('dt[data-target-cell].code-annotation-active');
+              if (activeEl) {
+                activeEl.classList.remove('code-annotation-active');
+              }
+              selectCodeLines(clickedEl);
+              clickedEl.classList.add('code-annotation-active');
+            } else {
+              // Unselect the line
+              unselectCodeLines();
+              clickedEl.classList.remove('code-annotation-active');
+            }
+          });
+        }
+    const findCites = (el) => {
+      const parentEl = el.parentElement;
+      if (parentEl) {
+        const cites = parentEl.dataset.cites;
+        if (cites) {
+          return {
+            el,
+            cites: cites.split(' ')
+          };
+        } else {
+          return findCites(el.parentElement)
+        }
+      } else {
+        return undefined;
+      }
+    };
+    var bibliorefs = window.document.querySelectorAll('a[role="doc-biblioref"]');
+    for (var i=0; i<bibliorefs.length; i++) {
+      const ref = bibliorefs[i];
+      const citeInfo = findCites(ref);
+      if (citeInfo) {
+        tippyHover(citeInfo.el, function() {
+          var popup = window.document.createElement('div');
+          citeInfo.cites.forEach(function(cite) {
+            var citeDiv = window.document.createElement('div');
+            citeDiv.classList.add('hanging-indent');
+            citeDiv.classList.add('csl-entry');
+            var biblioDiv = window.document.getElementById('ref-' + cite);
+            if (biblioDiv) {
+              citeDiv.innerHTML = biblioDiv.innerHTML;
+            }
+            popup.appendChild(citeDiv);
+          });
+          return popup.innerHTML;
+        });
+      }
+    }
+  });
+  </script><div class="modal fade" id="quarto-embedded-source-code-modal" tabindex="-1" aria-labelledby="quarto-embedded-source-code-modal-label" aria-hidden="true"><div class="modal-dialog modal-dialog-scrollable"><div class="modal-content"><div class="modal-header"><h5 class="modal-title" id="quarto-embedded-source-code-modal-label">Source Code</h5><button class="btn-close" data-bs-dismiss="modal"></button></div><div class="modal-body"><div class="">
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb17" data-shortcodes="false"><pre class="sourceCode markdown code-with-copy"><code class="sourceCode markdown"><span id="cb17-1"><a href="#cb17-1" aria-hidden="true" tabindex="-1"></a><span class="co">---</span></span>
+<span id="cb17-2"><a href="#cb17-2" aria-hidden="true" tabindex="-1"></a><span class="an">title:</span><span class="co"> "Sentiri Model Evaluation — Why XLM-RoBERTa and BERTopic?"</span></span>
+<span id="cb17-3"><a href="#cb17-3" aria-hidden="true" tabindex="-1"></a><span class="an">subtitle:</span><span class="co"> "Sentiment model comparison &amp; topic modeling justification for an autism therapy chat analyzer"</span></span>
+<span id="cb17-4"><a href="#cb17-4" aria-hidden="true" tabindex="-1"></a><span class="an">author:</span><span class="co"> "Nik Abdul Aqmal"</span></span>
+<span id="cb17-5"><a href="#cb17-5" aria-hidden="true" tabindex="-1"></a><span class="an">date:</span><span class="co"> today</span></span>
+<span id="cb17-6"><a href="#cb17-6" aria-hidden="true" tabindex="-1"></a><span class="an">format:</span></span>
+<span id="cb17-7"><a href="#cb17-7" aria-hidden="true" tabindex="-1"></a><span class="co">  html:</span></span>
+<span id="cb17-8"><a href="#cb17-8" aria-hidden="true" tabindex="-1"></a><span class="co">    theme: cosmo</span></span>
+<span id="cb17-9"><a href="#cb17-9" aria-hidden="true" tabindex="-1"></a><span class="co">    toc: true</span></span>
+<span id="cb17-10"><a href="#cb17-10" aria-hidden="true" tabindex="-1"></a><span class="co">    toc-depth: 3</span></span>
+<span id="cb17-11"><a href="#cb17-11" aria-hidden="true" tabindex="-1"></a><span class="co">    code-fold: true</span></span>
+<span id="cb17-12"><a href="#cb17-12" aria-hidden="true" tabindex="-1"></a><span class="co">    code-tools: true</span></span>
+<span id="cb17-13"><a href="#cb17-13" aria-hidden="true" tabindex="-1"></a><span class="co">    execute:</span></span>
+<span id="cb17-14"><a href="#cb17-14" aria-hidden="true" tabindex="-1"></a><span class="co">      echo: true</span></span>
+<span id="cb17-15"><a href="#cb17-15" aria-hidden="true" tabindex="-1"></a><span class="co">      warning: false</span></span>
+<span id="cb17-16"><a href="#cb17-16" aria-hidden="true" tabindex="-1"></a><span class="an">jupyter:</span><span class="co"> jupyter_env</span></span>
+<span id="cb17-17"><a href="#cb17-17" aria-hidden="true" tabindex="-1"></a><span class="co">---</span></span>
+<span id="cb17-18"><a href="#cb17-18" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb17-19"><a href="#cb17-19" aria-hidden="true" tabindex="-1"></a><span class="fu"># Introduction {.unnumbered}</span></span>
+<span id="cb17-20"><a href="#cb17-20" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb17-21"><a href="#cb17-21" aria-hidden="true" tabindex="-1"></a>**The question this report answers:** why did Sentiri choose **XLM-RoBERTa** for</span>
+<span id="cb17-22"><a href="#cb17-22" aria-hidden="true" tabindex="-1"></a>sentiment analysis and **BERTopic** for topic modeling, instead of the alternatives?</span>
+<span id="cb17-23"><a href="#cb17-23" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb17-24"><a href="#cb17-24" aria-hidden="true" tabindex="-1"></a>The defense is not authority ("XLM-R is popular") — it is **evidence**: define the</span>
+<span id="cb17-25"><a href="#cb17-25" aria-hidden="true" tabindex="-1"></a>requirements, compare candidates against them on the same data, and let the results</span>
+<span id="cb17-26"><a href="#cb17-26" aria-hidden="true" tabindex="-1"></a>justify the choice.</span>
+<span id="cb17-27"><a href="#cb17-27" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb17-28"><a href="#cb17-28" aria-hidden="true" tabindex="-1"></a><span class="fu">## Requirements that drive model choice</span></span>
+<span id="cb17-29"><a href="#cb17-29" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb17-30"><a href="#cb17-30" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> # <span class="pp">|</span> Requirement <span class="pp">|</span> Consequence for model choice <span class="pp">|</span></span>
+<span id="cb17-31"><a href="#cb17-31" aria-hidden="true" tabindex="-1"></a><span class="pp">|---|---|---|</span></span>
+<span id="cb17-32"><a href="#cb17-32" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> R1 <span class="pp">|</span> Malaysian chat text: Malay-English code-switching (*rojak*) <span class="pp">|</span> Model must be multilingual at the token level, not translated <span class="pp">|</span></span>
+<span id="cb17-33"><a href="#cb17-33" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> R2 <span class="pp">|</span> 3 classes: negative / neutral / positive, imbalanced <span class="pp">|</span> Need macro-F1 + per-class recall, not accuracy alone <span class="pp">|</span></span>
+<span id="cb17-34"><a href="#cb17-34" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> R3 <span class="pp">|</span> Clinical context: distressed messages must not be missed <span class="pp">|</span> Negative-class **recall** is the priority metric <span class="pp">|</span></span>
+<span id="cb17-35"><a href="#cb17-35" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> R4 <span class="pp">|</span> Deployment on a budget (Render + HF Inference) <span class="pp">|</span> Model size + inference time matter <span class="pp">|</span></span>
+<span id="cb17-36"><a href="#cb17-36" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> R5 <span class="pp">|</span> Short, informal, noisy messages (WhatsApp-style) <span class="pp">|</span> Model must handle 3–20 token messages without dilution <span class="pp">|</span></span>
+<span id="cb17-37"><a href="#cb17-37" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb17-38"><a href="#cb17-38" aria-hidden="true" tabindex="-1"></a><span class="fu">## Candidates</span></span>
+<span id="cb17-39"><a href="#cb17-39" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb17-40"><a href="#cb17-40" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> Model <span class="pp">|</span> Role in comparison <span class="pp">|</span> Params <span class="pp">|</span></span>
+<span id="cb17-41"><a href="#cb17-41" aria-hidden="true" tabindex="-1"></a><span class="pp">|---|---|---|</span></span>
+<span id="cb17-42"><a href="#cb17-42" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> XLM-RoBERTa-base <span class="pp">|</span> Generalist multilingual heavyweight (our pick) <span class="pp">|</span> 278M <span class="pp">|</span></span>
+<span id="cb17-43"><a href="#cb17-43" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> mBERT-base <span class="pp">|</span> The older multilingual baseline <span class="pp">|</span> 178M <span class="pp">|</span></span>
+<span id="cb17-44"><a href="#cb17-44" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> IndoBERT-base-p1 <span class="pp">|</span> Regional specialist (Indonesian/Malay) <span class="pp">|</span> 124M <span class="pp">|</span></span>
+<span id="cb17-45"><a href="#cb17-45" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> DistilBERT-multilingual <span class="pp">|</span> Efficiency baseline <span class="pp">|</span> 135M <span class="pp">|</span></span>
+<span id="cb17-46"><a href="#cb17-46" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb17-47"><a href="#cb17-47" aria-hidden="true" tabindex="-1"></a>**Hypothesis:** XLM-R wins on mixed rojak messages; IndoBERT may win on pure formal</span>
+<span id="cb17-48"><a href="#cb17-48" aria-hidden="true" tabindex="-1"></a>Malay. The per-message breakdown is the interesting finding — which is exactly what</span>
+<span id="cb17-49"><a href="#cb17-49" aria-hidden="true" tabindex="-1"></a>the evaluation is for.</span>
+<span id="cb17-50"><a href="#cb17-50" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb17-51"><a href="#cb17-51" aria-hidden="true" tabindex="-1"></a><span class="fu"># Data</span></span>
+<span id="cb17-52"><a href="#cb17-52" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb17-53"><a href="#cb17-53" aria-hidden="true" tabindex="-1"></a>Source: 2,171 labeled WhatsApp messages (pos/neg/neutral) from the autism therapy</span>
+<span id="cb17-54"><a href="#cb17-54" aria-hidden="true" tabindex="-1"></a>domain. Same split (seed=42) for every model — a comparison is only fair if all</span>
+<span id="cb17-55"><a href="#cb17-55" aria-hidden="true" tabindex="-1"></a>candidates see identical train/test folds.</span>
+<span id="cb17-56"><a href="#cb17-56" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb17-57"><a href="#cb17-57" aria-hidden="true" tabindex="-1"></a><span class="fu"># Setup {.unnumbered}</span></span>
+<span id="cb17-58"><a href="#cb17-58" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb17-61"><a href="#cb17-61" aria-hidden="true" tabindex="-1"></a><span class="in">```{python}</span></span>
+<span id="cb17-62"><a href="#cb17-62" aria-hidden="true" tabindex="-1"></a><span class="co">#| label: setup</span></span>
+<span id="cb17-63"><a href="#cb17-63" aria-hidden="true" tabindex="-1"></a><span class="co">#| context: setup</span></span>
+<span id="cb17-64"><a href="#cb17-64" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> warnings</span>
+<span id="cb17-65"><a href="#cb17-65" aria-hidden="true" tabindex="-1"></a>warnings.filterwarnings(<span class="st">"ignore"</span>)</span>
+<span id="cb17-66"><a href="#cb17-66" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb17-67"><a href="#cb17-67" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> os, sys, time</span>
+<span id="cb17-68"><a href="#cb17-68" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> numpy <span class="im">as</span> np</span>
+<span id="cb17-69"><a href="#cb17-69" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> pandas <span class="im">as</span> pd</span>
+<span id="cb17-70"><a href="#cb17-70" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> matplotlib.pyplot <span class="im">as</span> plt</span>
+<span id="cb17-71"><a href="#cb17-71" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> pathlib <span class="im">import</span> Path</span>
+<span id="cb17-72"><a href="#cb17-72" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> sklearn.metrics <span class="im">import</span> (</span>
+<span id="cb17-73"><a href="#cb17-73" aria-hidden="true" tabindex="-1"></a>    accuracy_score, f1_score, precision_score, recall_score,</span>
+<span id="cb17-74"><a href="#cb17-74" aria-hidden="true" tabindex="-1"></a>    confusion_matrix, ConfusionMatrixDisplay, classification_report,</span>
+<span id="cb17-75"><a href="#cb17-75" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb17-76"><a href="#cb17-76" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb17-77"><a href="#cb17-77" aria-hidden="true" tabindex="-1"></a><span class="co"># --- Production pipeline access -------------------------------------------</span></span>
+<span id="cb17-78"><a href="#cb17-78" aria-hidden="true" tabindex="-1"></a><span class="co"># We import the REAL cleaner from the Sentiri codebase, not a copy.</span></span>
+<span id="cb17-79"><a href="#cb17-79" aria-hidden="true" tabindex="-1"></a><span class="co"># This is the same code the Django server runs — so the evaluation measures</span></span>
+<span id="cb17-80"><a href="#cb17-80" aria-hidden="true" tabindex="-1"></a><span class="co"># the production pipeline, not a notebook re-implementation (no train/serve skew).</span></span>
+<span id="cb17-81"><a href="#cb17-81" aria-hidden="true" tabindex="-1"></a>SENTIRI_ROOT <span class="op">=</span> Path(<span class="st">"/Users/apple/degree/finalyearengineredo"</span>)</span>
+<span id="cb17-82"><a href="#cb17-82" aria-hidden="true" tabindex="-1"></a>os.environ.setdefault(<span class="st">"DJANGO_SETTINGS_MODULE"</span>, <span class="st">"finalyearengineredo.settings"</span>)</span>
+<span id="cb17-83"><a href="#cb17-83" aria-hidden="true" tabindex="-1"></a>sys.path.insert(<span class="dv">0</span>, <span class="bu">str</span>(SENTIRI_ROOT))</span>
+<span id="cb17-84"><a href="#cb17-84" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb17-85"><a href="#cb17-85" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> django</span>
+<span id="cb17-86"><a href="#cb17-86" aria-hidden="true" tabindex="-1"></a>django.setup()</span>
+<span id="cb17-87"><a href="#cb17-87" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb17-88"><a href="#cb17-88" aria-hidden="true" tabindex="-1"></a>DATA <span class="op">=</span> SENTIRI_ROOT <span class="op">/</span> <span class="st">"chat_analyzer/data/labeled_data/labeledsentimentdatatwo_balanced.csv"</span></span>
+<span id="cb17-89"><a href="#cb17-89" aria-hidden="true" tabindex="-1"></a>LABELS <span class="op">=</span> {<span class="dv">0</span>: <span class="st">"negative"</span>, <span class="dv">1</span>: <span class="st">"neutral"</span>, <span class="dv">2</span>: <span class="st">"positive"</span>}</span>
+<span id="cb17-90"><a href="#cb17-90" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
+<span id="cb17-91"><a href="#cb17-91" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb17-92"><a href="#cb17-92" aria-hidden="true" tabindex="-1"></a><span class="fu"># The cleaning pipeline (what the model actually sees)</span></span>
+<span id="cb17-93"><a href="#cb17-93" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb17-94"><a href="#cb17-94" aria-hidden="true" tabindex="-1"></a>The production pipeline cleans every message through <span class="in">`MalayTextCleaner`</span> before</span>
+<span id="cb17-95"><a href="#cb17-95" aria-hidden="true" tabindex="-1"></a>it reaches any model. Two different cleaning profiles exist, because the two</span>
+<span id="cb17-96"><a href="#cb17-96" aria-hidden="true" tabindex="-1"></a>downstream tasks need different text:</span>
+<span id="cb17-97"><a href="#cb17-97" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb17-98"><a href="#cb17-98" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> Profile <span class="pp">|</span> What it keeps <span class="pp">|</span> Why <span class="pp">|</span></span>
+<span id="cb17-99"><a href="#cb17-99" aria-hidden="true" tabindex="-1"></a><span class="pp">|---|---|---|</span></span>
+<span id="cb17-100"><a href="#cb17-100" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> <span class="in">`clean_for_sentiment`</span> <span class="pp">|</span> negation words (*tak, x, bukan*), sentiment-bearing tokens | Negation flips sentiment — removing *tak* turns "tak nak" into "nak" <span class="pp">|</span></span>
+<span id="cb17-101"><a href="#cb17-101" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> <span class="in">`clean_for_topic_modeling`</span> <span class="pp">|</span> domain words, stems <span class="pp">|</span> Topic modeling needs dense topical signal; stopwords are noise <span class="pp">|</span></span>
+<span id="cb17-102"><a href="#cb17-102" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb17-103"><a href="#cb17-103" aria-hidden="true" tabindex="-1"></a>Shared layers in <span class="in">`_base_clean`</span> (both profiles inherit): normalizer → typo/slang</span>
+<span id="cb17-104"><a href="#cb17-104" aria-hidden="true" tabindex="-1"></a>mapping → emoji conversion → **PII removal (person names + honorifics, before</span>
+<span id="cb17-105"><a href="#cb17-105" aria-hidden="true" tabindex="-1"></a>steming)** → curse filtering.</span>
+<span id="cb17-106"><a href="#cb17-106" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb17-107"><a href="#cb17-107" aria-hidden="true" tabindex="-1"></a><span class="fu">## The lexicon files (the cleaner's knowledge base)</span></span>
+<span id="cb17-108"><a href="#cb17-108" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb17-109"><a href="#cb17-109" aria-hidden="true" tabindex="-1"></a>The cleaner is rules + data. The *code* is ~450 lines; the *knowledge* lives in</span>
+<span id="cb17-110"><a href="#cb17-110" aria-hidden="true" tabindex="-1"></a>12 curated data files under <span class="in">`chat_analyzer/data/`</span>. This is deliberate: domain</span>
+<span id="cb17-111"><a href="#cb17-111" aria-hidden="true" tabindex="-1"></a>experts (admin) can improve the pipeline by editing data, not code.</span>
+<span id="cb17-112"><a href="#cb17-112" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb17-115"><a href="#cb17-115" aria-hidden="true" tabindex="-1"></a><span class="in">```{python}</span></span>
+<span id="cb17-116"><a href="#cb17-116" aria-hidden="true" tabindex="-1"></a><span class="co">#| label: lexicon-inventory</span></span>
+<span id="cb17-117"><a href="#cb17-117" aria-hidden="true" tabindex="-1"></a><span class="co">#| tbl-cap: "Curated lexicon files backing the cleaning pipeline"</span></span>
+<span id="cb17-118"><a href="#cb17-118" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> json</span>
+<span id="cb17-119"><a href="#cb17-119" aria-hidden="true" tabindex="-1"></a>DATA_DIR <span class="op">=</span> SENTIRI_ROOT <span class="op">/</span> <span class="st">"chat_analyzer/data"</span></span>
+<span id="cb17-120"><a href="#cb17-120" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb17-121"><a href="#cb17-121" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> count_entries(path):</span>
+<span id="cb17-122"><a href="#cb17-122" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> path.suffix <span class="op">==</span> <span class="st">".json"</span>:</span>
+<span id="cb17-123"><a href="#cb17-123" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span> <span class="bu">len</span>(json.load(<span class="bu">open</span>(path)))</span>
+<span id="cb17-124"><a href="#cb17-124" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> <span class="bu">sum</span>(<span class="dv">1</span> <span class="cf">for</span> line <span class="kw">in</span> <span class="bu">open</span>(path, encoding<span class="op">=</span><span class="st">"utf-8"</span>)</span>
+<span id="cb17-125"><a href="#cb17-125" aria-hidden="true" tabindex="-1"></a>               <span class="cf">if</span> line.strip() <span class="kw">and</span> <span class="kw">not</span> line.strip().startswith(<span class="st">"#"</span>))</span>
+<span id="cb17-126"><a href="#cb17-126" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb17-127"><a href="#cb17-127" aria-hidden="true" tabindex="-1"></a>lexicon_files <span class="op">=</span> [</span>
+<span id="cb17-128"><a href="#cb17-128" aria-hidden="true" tabindex="-1"></a>    (<span class="st">"typo_mapping.json"</span>,       <span class="st">"Typo corrections (raw → correct form)"</span>),</span>
+<span id="cb17-129"><a href="#cb17-129" aria-hidden="true" tabindex="-1"></a>    (<span class="st">"slang_mapping.json"</span>,      <span class="st">"Chat slang / abbreviations (mkn → makan, x nk → tak nak)"</span>),</span>
+<span id="cb17-130"><a href="#cb17-130" aria-hidden="true" tabindex="-1"></a>    (<span class="st">"emoji_mapping.json"</span>,      <span class="st">"Emoji → sentiment word conversion"</span>),</span>
+<span id="cb17-131"><a href="#cb17-131" aria-hidden="true" tabindex="-1"></a>    (<span class="st">"root_mapping.json"</span>,       <span class="st">"Irregular root word mapping"</span>),</span>
+<span id="cb17-132"><a href="#cb17-132" aria-hidden="true" tabindex="-1"></a>    (<span class="st">"english_to_malay.json"</span>,   <span class="st">"English → Malay translation (topic path)"</span>),</span>
+<span id="cb17-133"><a href="#cb17-133" aria-hidden="true" tabindex="-1"></a>    (<span class="st">"stopwords_malay.txt"</span>,     <span class="st">"Base Malay stopwords"</span>),</span>
+<span id="cb17-134"><a href="#cb17-134" aria-hidden="true" tabindex="-1"></a>    (<span class="st">"sentiment_stopwords.txt"</span>, <span class="st">"LIGHT stopwords — sentiment path keeps negation words"</span>),</span>
+<span id="cb17-135"><a href="#cb17-135" aria-hidden="true" tabindex="-1"></a>    (<span class="st">"topic_stopwords.txt"</span>,     <span class="st">"HEAVY stopwords — topic path strips aggressively"</span>),</span>
+<span id="cb17-136"><a href="#cb17-136" aria-hidden="true" tabindex="-1"></a>    (<span class="st">"domain_words_topic.txt"</span>,  <span class="st">"Therapy domain terms to KEEP (topic path)"</span>),</span>
+<span id="cb17-137"><a href="#cb17-137" aria-hidden="true" tabindex="-1"></a>    (<span class="st">"domain_words_sentiment.txt"</span>, <span class="st">"Sentiment-bearing terms to KEEP (sentiment path)"</span>),</span>
+<span id="cb17-138"><a href="#cb17-138" aria-hidden="true" tabindex="-1"></a>    (<span class="st">"person_names.txt"</span>,        <span class="st">"PII blocklist: client/staff names + honorifics (removed before stemming)"</span>),</span>
+<span id="cb17-139"><a href="#cb17-139" aria-hidden="true" tabindex="-1"></a>]</span>
+<span id="cb17-140"><a href="#cb17-140" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb17-141"><a href="#cb17-141" aria-hidden="true" tabindex="-1"></a>pd.DataFrame(</span>
+<span id="cb17-142"><a href="#cb17-142" aria-hidden="true" tabindex="-1"></a>    [(name, count_entries(DATA_DIR <span class="op">/</span> name), desc) <span class="cf">for</span> name, desc <span class="kw">in</span> lexicon_files],</span>
+<span id="cb17-143"><a href="#cb17-143" aria-hidden="true" tabindex="-1"></a>    columns<span class="op">=</span>[<span class="st">"File"</span>, <span class="st">"Entries"</span>, <span class="st">"Purpose"</span>],</span>
+<span id="cb17-144"><a href="#cb17-144" aria-hidden="true" tabindex="-1"></a>).set_index(<span class="st">"File"</span>)</span>
+<span id="cb17-145"><a href="#cb17-145" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
+<span id="cb17-146"><a href="#cb17-146" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb17-147"><a href="#cb17-147" aria-hidden="true" tabindex="-1"></a><span class="fu">## Before / after on real messages</span></span>
+<span id="cb17-148"><a href="#cb17-148" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb17-151"><a href="#cb17-151" aria-hidden="true" tabindex="-1"></a><span class="in">```{python}</span></span>
+<span id="cb17-152"><a href="#cb17-152" aria-hidden="true" tabindex="-1"></a><span class="co">#| label: cleaning-demo</span></span>
+<span id="cb17-153"><a href="#cb17-153" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> json</span>
+<span id="cb17-154"><a href="#cb17-154" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> chat_analyzer.services.text_cleaner <span class="im">import</span> clean_for_sentiment, clean_for_topic_modeling</span>
+<span id="cb17-155"><a href="#cb17-155" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb17-156"><a href="#cb17-156" aria-hidden="true" tabindex="-1"></a>demo <span class="op">=</span> [</span>
+<span id="cb17-157"><a href="#cb17-157" aria-hidden="true" tabindex="-1"></a>    <span class="st">"Puan Aina kata affan tidur lewat semalam 😴 x nk mkn nasi"</span>,</span>
+<span id="cb17-158"><a href="#cb17-158" aria-hidden="true" tabindex="-1"></a>    <span class="st">"syukur alhamdulillah hari ni ammar dah boleh duduk diam2 dlm kelas"</span>,</span>
+<span id="cb17-159"><a href="#cb17-159" aria-hidden="true" tabindex="-1"></a>]</span>
+<span id="cb17-160"><a href="#cb17-160" aria-hidden="true" tabindex="-1"></a>pd.DataFrame({</span>
+<span id="cb17-161"><a href="#cb17-161" aria-hidden="true" tabindex="-1"></a>    <span class="st">"raw"</span>: demo,</span>
+<span id="cb17-162"><a href="#cb17-162" aria-hidden="true" tabindex="-1"></a>    <span class="st">"sentiment_input"</span>: [clean_for_sentiment(t) <span class="cf">for</span> t <span class="kw">in</span> demo],</span>
+<span id="cb17-163"><a href="#cb17-163" aria-hidden="true" tabindex="-1"></a>    <span class="st">"topic_input"</span>: [clean_for_topic_modeling(t) <span class="cf">for</span> t <span class="kw">in</span> demo],</span>
+<span id="cb17-164"><a href="#cb17-164" aria-hidden="true" tabindex="-1"></a>})</span>
+<span id="cb17-165"><a href="#cb17-165" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
+<span id="cb17-166"><a href="#cb17-166" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb17-167"><a href="#cb17-167" aria-hidden="true" tabindex="-1"></a><span class="fu"># Part 1 — Why not a lexicon approach?</span></span>
+<span id="cb17-168"><a href="#cb17-168" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb17-169"><a href="#cb17-169" aria-hidden="true" tabindex="-1"></a>The initial direction (suggested by our lecturer) was a **lexicon-based** sentiment</span>
+<span id="cb17-170"><a href="#cb17-170" aria-hidden="true" tabindex="-1"></a>analyzer: score each message by looking up its words in a sentiment dictionary.</span>
+<span id="cb17-171"><a href="#cb17-171" aria-hidden="true" tabindex="-1"></a>We investigated and rejected this approach — for three evidence-backed reasons.</span>
+<span id="cb17-172"><a href="#cb17-172" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb17-173"><a href="#cb17-173" aria-hidden="true" tabindex="-1"></a><span class="fu">## 1.1 The resource gap (weaker argument)</span></span>
+<span id="cb17-174"><a href="#cb17-174" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb17-175"><a href="#cb17-175" aria-hidden="true" tabindex="-1"></a>Malay has **no maintained, ready-to-use sentiment lexicon** — nothing comparable</span>
+<span id="cb17-176"><a href="#cb17-176" aria-hidden="true" tabindex="-1"></a>to English's VADER, SentiWordNet, or AFINN that one can download and run today.</span>
+<span id="cb17-177"><a href="#cb17-177" aria-hidden="true" tabindex="-1"></a>What exists are *induction methods* in research papers (Omar et al. 2017 maps</span>
+<span id="cb17-178"><a href="#cb17-178" aria-hidden="true" tabindex="-1"></a>WordNet Bahasa onto English SentiWordNet; cross-lingual synset-mapping experiments</span>
+<span id="cb17-179"><a href="#cb17-179" aria-hidden="true" tabindex="-1"></a>exist), whose outputs are not published as reusable artifacts. This is a real</span>
+<span id="cb17-180"><a href="#cb17-180" aria-hidden="true" tabindex="-1"></a>but recoverable obstacle — one could build a domain lexicon — so it alone does</span>
+<span id="cb17-181"><a href="#cb17-181" aria-hidden="true" tabindex="-1"></a>not justify abandoning the approach. The decisive arguments follow.</span>
+<span id="cb17-182"><a href="#cb17-182" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb17-183"><a href="#cb17-183" aria-hidden="true" tabindex="-1"></a><span class="fu">## 1.2 Contextual polarity flips — the measured failure mode</span></span>
+<span id="cb17-184"><a href="#cb17-184" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb17-185"><a href="#cb17-185" aria-hidden="true" tabindex="-1"></a>A lexicon assigns each word a **prior polarity** (dictionary meaning). But words</span>
+<span id="cb17-186"><a href="#cb17-186" aria-hidden="true" tabindex="-1"></a>carry their **contextual polarity** from the sentence. In therapy-progress</span>
+<span id="cb17-187"><a href="#cb17-187" aria-hidden="true" tabindex="-1"></a>chats, this gap is not an edge case — we measured it:</span>
+<span id="cb17-188"><a href="#cb17-188" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb17-191"><a href="#cb17-191" aria-hidden="true" tabindex="-1"></a><span class="in">```{python}</span></span>
+<span id="cb17-192"><a href="#cb17-192" aria-hidden="true" tabindex="-1"></a><span class="co">#| label: lexicon-traps</span></span>
+<span id="cb17-193"><a href="#cb17-193" aria-hidden="true" tabindex="-1"></a><span class="co">#| tbl-cap: "Negative-labeled messages that contain dictionary-positive words"</span></span>
+<span id="cb17-194"><a href="#cb17-194" aria-hidden="true" tabindex="-1"></a>df_raw <span class="op">=</span> pd.read_csv(DATA)</span>
+<span id="cb17-195"><a href="#cb17-195" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb17-196"><a href="#cb17-196" aria-hidden="true" tabindex="-1"></a>POS_WORDS <span class="op">=</span> [<span class="st">"bagus"</span>, <span class="st">"baik"</span>, <span class="st">"gembira"</span>, <span class="st">"syukur"</span>, <span class="st">"senang"</span>, <span class="st">"best"</span>,</span>
+<span id="cb17-197"><a href="#cb17-197" aria-hidden="true" tabindex="-1"></a>             <span class="st">"pandai"</span>, <span class="st">"bijak"</span>, <span class="st">"boleh"</span>, <span class="st">"suka"</span>, <span class="st">"terer"</span>, <span class="st">"hebat"</span>]</span>
+<span id="cb17-198"><a href="#cb17-198" aria-hidden="true" tabindex="-1"></a>pattern <span class="op">=</span> <span class="st">"|"</span>.join(POS_WORDS)</span>
+<span id="cb17-199"><a href="#cb17-199" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb17-200"><a href="#cb17-200" aria-hidden="true" tabindex="-1"></a>traps <span class="op">=</span> df_raw[(df_raw[<span class="st">"label"</span>] <span class="op">==</span> <span class="dv">0</span>)</span>
+<span id="cb17-201"><a href="#cb17-201" aria-hidden="true" tabindex="-1"></a>               <span class="op">&amp;</span> (df_raw[<span class="st">"text"</span>].<span class="bu">str</span>.lower().<span class="bu">str</span>.contains(pattern, na<span class="op">=</span><span class="va">False</span>))]</span>
+<span id="cb17-202"><a href="#cb17-202" aria-hidden="true" tabindex="-1"></a>n_neg <span class="op">=</span> (df_raw[<span class="st">"label"</span>] <span class="op">==</span> <span class="dv">0</span>).<span class="bu">sum</span>()</span>
+<span id="cb17-203"><a href="#cb17-203" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="ss">f"Negative messages containing a positive-looking word: "</span></span>
+<span id="cb17-204"><a href="#cb17-204" aria-hidden="true" tabindex="-1"></a>      <span class="ss">f"</span><span class="sc">{</span><span class="bu">len</span>(traps)<span class="sc">}</span><span class="ss"> / </span><span class="sc">{</span>n_neg<span class="sc">}</span><span class="ss"> (</span><span class="sc">{</span><span class="dv">100</span><span class="op">*</span><span class="bu">len</span>(traps)<span class="op">/</span>n_neg<span class="sc">:.1f}</span><span class="ss">%)"</span>)</span>
+<span id="cb17-205"><a href="#cb17-205" aria-hidden="true" tabindex="-1"></a>traps[<span class="st">"text"</span>].head(<span class="dv">12</span>).tolist()</span>
+<span id="cb17-206"><a href="#cb17-206" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
+<span id="cb17-207"><a href="#cb17-207" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb17-208"><a href="#cb17-208" aria-hidden="true" tabindex="-1"></a>The recurring patterns in these messages — the *reasons* word-level lookup fails:</span>
+<span id="cb17-209"><a href="#cb17-209" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb17-210"><a href="#cb17-210" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> Trap <span class="pp">|</span> Example from our data <span class="pp">|</span> Why a lexicon cannot see it <span class="pp">|</span></span>
+<span id="cb17-211"><a href="#cb17-211" aria-hidden="true" tabindex="-1"></a><span class="pp">|---|---|---|</span></span>
+<span id="cb17-212"><a href="#cb17-212" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> **Negation** | "merangkak pun **tak boleh**" <span class="pp">|</span> *boleh* scores positive; the *tak* before it flips the phrase. Lexicons score words one at a time <span class="pp">|</span></span>
+<span id="cb17-213"><a href="#cb17-213" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> **Contrastive conjunction** | "ammar boleh membaca **tetapi** tidak boleh berinteraksi" <span class="pp">|</span> First clause positive, whole sentence negative — polarity lives in the *contrast*, not any single word <span class="pp">|</span></span>
+<span id="cb17-214"><a href="#cb17-214" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> **Mixed-clause polarity** | "dia selalu sedih dan **suka** marah, merajuk" <span class="pp">|</span> *suka* ("likes") attaches to a negative behavior: "easily angered" <span class="pp">|</span></span>
+<span id="cb17-215"><a href="#cb17-215" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> **Domain semantics** <span class="pp">|</span> "dia masih tak boleh control" <span class="pp">|</span> Progress-report framing makes capability words markers of *struggle* when negated <span class="pp">|</span></span>
+<span id="cb17-216"><a href="#cb17-216" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb17-217"><a href="#cb17-217" aria-hidden="true" tabindex="-1"></a>This is the **prior vs contextual polarity** distinction (Wilson, Wiebe &amp;</span>
+<span id="cb17-218"><a href="#cb17-218" aria-hidden="true" tabindex="-1"></a>Hoffmann, 2005): lexicons capture the former, sentiment in real text is carried</span>
+<span id="cb17-219"><a href="#cb17-219" aria-hidden="true" tabindex="-1"></a>by the latter. A transformer reads the whole sequence and learns these flips</span>
+<span id="cb17-220"><a href="#cb17-220" aria-hidden="true" tabindex="-1"></a>from labeled data — including that "tidur lewat" is a complaint, not a nap report.</span>
+<span id="cb17-221"><a href="#cb17-221" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb17-222"><a href="#cb17-222" aria-hidden="true" tabindex="-1"></a><span class="fu">## 1.3 Lexicon baseline — measured, not assumed</span></span>
+<span id="cb17-223"><a href="#cb17-223" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb17-224"><a href="#cb17-224" aria-hidden="true" tabindex="-1"></a>To honor the suggestion properly, we test it rather than dismiss it. The</span>
+<span id="cb17-225"><a href="#cb17-225" aria-hidden="true" tabindex="-1"></a>baseline below scores messages using our curated sentiment word lists (the same</span>
+<span id="cb17-226"><a href="#cb17-226" aria-hidden="true" tabindex="-1"></a>domain knowledge embedded in <span class="in">`domain_words_sentiment.txt`</span>) — the strongest</span>
+<span id="cb17-227"><a href="#cb17-227" aria-hidden="true" tabindex="-1"></a>lexicon a lexicon approach could reasonably have here.</span>
+<span id="cb17-228"><a href="#cb17-228" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb17-231"><a href="#cb17-231" aria-hidden="true" tabindex="-1"></a><span class="in">```{python}</span></span>
+<span id="cb17-232"><a href="#cb17-232" aria-hidden="true" tabindex="-1"></a><span class="co">#| label: lexicon-baseline</span></span>
+<span id="cb17-233"><a href="#cb17-233" aria-hidden="true" tabindex="-1"></a><span class="co"># </span><span class="al">TODO</span><span class="co"> (you): implement LexiconBaseline as a fifth row of the comparison.</span></span>
+<span id="cb17-234"><a href="#cb17-234" aria-hidden="true" tabindex="-1"></a><span class="co">#   1. Load positive and negative word lists (from domain_words_sentiment.txt</span></span>
+<span id="cb17-235"><a href="#cb17-235" aria-hidden="true" tabindex="-1"></a><span class="co">#      or a curated pos/neg pair of lists).</span></span>
+<span id="cb17-236"><a href="#cb17-236" aria-hidden="true" tabindex="-1"></a><span class="co">#   2. Score: for each message, count positive hits minus negative hits</span></span>
+<span id="cb17-237"><a href="#cb17-237" aria-hidden="true" tabindex="-1"></a><span class="co">#      (lowercase, simple substring or token match).</span></span>
+<span id="cb17-238"><a href="#cb17-238" aria-hidden="true" tabindex="-1"></a><span class="co">#   3. DECISION (answer before coding): a message with ZERO lexicon hits gets</span></span>
+<span id="cb17-239"><a href="#cb17-239" aria-hidden="true" tabindex="-1"></a><span class="co">#      which label? Most messages are logistical smalltalk with no sentiment</span></span>
+<span id="cb17-240"><a href="#cb17-240" aria-hidden="true" tabindex="-1"></a><span class="co">#      words at all. Choose the mapping that is FAVORABLE to the baseline</span></span>
+<span id="cb17-241"><a href="#cb17-241" aria-hidden="true" tabindex="-1"></a><span class="co">#      (not a strawman) — and justify it in a comment.</span></span>
+<span id="cb17-242"><a href="#cb17-242" aria-hidden="true" tabindex="-1"></a><span class="co">#   4. Evaluate on the same test split as the neural models: accuracy, macro-F1,</span></span>
+<span id="cb17-243"><a href="#cb17-243" aria-hidden="true" tabindex="-1"></a><span class="co">#      and — the key number — its accuracy on the `traps` subset above.</span></span>
+<span id="cb17-244"><a href="#cb17-244" aria-hidden="true" tabindex="-1"></a><span class="co">#      Prediction to make before running: will the lexicon beat random on the</span></span>
+<span id="cb17-245"><a href="#cb17-245" aria-hidden="true" tabindex="-1"></a><span class="co">#      traps subset? Why or why not?</span></span>
+<span id="cb17-246"><a href="#cb17-246" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
+<span id="cb17-247"><a href="#cb17-247" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb17-248"><a href="#cb17-248" aria-hidden="true" tabindex="-1"></a><span class="fu"># Part 2 — Sentiment model comparison</span></span>
+<span id="cb17-249"><a href="#cb17-249" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb17-250"><a href="#cb17-250" aria-hidden="true" tabindex="-1"></a><span class="fu">## 2.1 Load and split</span></span>
+<span id="cb17-251"><a href="#cb17-251" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb17-254"><a href="#cb17-254" aria-hidden="true" tabindex="-1"></a><span class="in">```{python}</span></span>
+<span id="cb17-255"><a href="#cb17-255" aria-hidden="true" tabindex="-1"></a><span class="co">#| label: load-data</span></span>
+<span id="cb17-256"><a href="#cb17-256" aria-hidden="true" tabindex="-1"></a><span class="co"># </span><span class="al">TODO</span><span class="co"> (you): load the CSV, show class distribution, train/test split seed=42 test_size=0.2</span></span>
+<span id="cb17-257"><a href="#cb17-257" aria-hidden="true" tabindex="-1"></a><span class="co"># Hint: mirror fine_tune_sentiment.py's data path and split so results are comparable.</span></span>
+<span id="cb17-258"><a href="#cb17-258" aria-hidden="true" tabindex="-1"></a>df <span class="op">=</span> pd.read_csv(DATA)</span>
+<span id="cb17-259"><a href="#cb17-259" aria-hidden="true" tabindex="-1"></a>...</span>
+<span id="cb17-260"><a href="#cb17-260" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
+<span id="cb17-261"><a href="#cb17-261" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb17-262"><a href="#cb17-262" aria-hidden="true" tabindex="-1"></a><span class="fu">## 1.2 Fine-tune XLM-R (the incumbent)</span></span>
+<span id="cb17-263"><a href="#cb17-263" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb17-266"><a href="#cb17-266" aria-hidden="true" tabindex="-1"></a><span class="in">```{python}</span></span>
+<span id="cb17-267"><a href="#cb17-267" aria-hidden="true" tabindex="-1"></a><span class="co">#| label: train-xlmr</span></span>
+<span id="cb17-268"><a href="#cb17-268" aria-hidden="true" tabindex="-1"></a><span class="co"># </span><span class="al">TODO</span><span class="co"> (you): fine-tune xlm-roberta-base on the train split.</span></span>
+<span id="cb17-269"><a href="#cb17-269" aria-hidden="true" tabindex="-1"></a><span class="co">#   - same hyperparameters as chat_analyzer/services/fine_tune_sentiment.py</span></span>
+<span id="cb17-270"><a href="#cb17-270" aria-hidden="true" tabindex="-1"></a><span class="co">#     (so this notebook reproduces the production model)</span></span>
+<span id="cb17-271"><a href="#cb17-271" aria-hidden="true" tabindex="-1"></a><span class="co">#   - record: per-class precision/recall/F1 on test, macro-F1, accuracy,</span></span>
+<span id="cb17-272"><a href="#cb17-272" aria-hidden="true" tabindex="-1"></a><span class="co">#     train time, params count</span></span>
+<span id="cb17-273"><a href="#cb17-273" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
+<span id="cb17-274"><a href="#cb17-274" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb17-275"><a href="#cb17-275" aria-hidden="true" tabindex="-1"></a><span class="fu">## 1.3 Baselines: mBERT, IndoBERT, DistilBERT</span></span>
+<span id="cb17-276"><a href="#cb17-276" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb17-279"><a href="#cb17-279" aria-hidden="true" tabindex="-1"></a><span class="in">```{python}</span></span>
+<span id="cb17-280"><a href="#cb17-280" aria-hidden="true" tabindex="-1"></a><span class="co">#| label: train-baselines</span></span>
+<span id="cb17-281"><a href="#cb17-281" aria-hidden="true" tabindex="-1"></a><span class="co"># </span><span class="al">TODO</span><span class="co"> (you): same recipe (epochs, lr, batch size) for each baseline.</span></span>
+<span id="cb17-282"><a href="#cb17-282" aria-hidden="true" tabindex="-1"></a><span class="co">#   FAIRNESS RULE: only the checkpoint changes; everything else identical.</span></span>
+<span id="cb17-283"><a href="#cb17-283" aria-hidden="true" tabindex="-1"></a><span class="co">#   That's what makes "XLM-R beat mBERT by X points" a defensible claim.</span></span>
+<span id="cb17-284"><a href="#cb17-284" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
+<span id="cb17-285"><a href="#cb17-285" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb17-286"><a href="#cb17-286" aria-hidden="true" tabindex="-1"></a><span class="fu">## 1.4 Metrics matrix</span></span>
+<span id="cb17-287"><a href="#cb17-287" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb17-290"><a href="#cb17-290" aria-hidden="true" tabindex="-1"></a><span class="in">```{python}</span></span>
+<span id="cb17-291"><a href="#cb17-291" aria-hidden="true" tabindex="-1"></a><span class="co">#| label: metrics-matrix</span></span>
+<span id="cb17-292"><a href="#cb17-292" aria-hidden="true" tabindex="-1"></a><span class="co"># </span><span class="al">TODO</span><span class="co"> (you): build a results DataFrame: model × {accuracy, macro-F1,</span></span>
+<span id="cb17-293"><a href="#cb17-293" aria-hidden="true" tabindex="-1"></a><span class="co">#   per-class P/R/F1, negative recall (clinical priority), train time,</span></span>
+<span id="cb17-294"><a href="#cb17-294" aria-hidden="true" tabindex="-1"></a><span class="co">#   params}. Display as a styled Quarto table.</span></span>
+<span id="cb17-295"><a href="#cb17-295" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
+<span id="cb17-296"><a href="#cb17-296" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb17-297"><a href="#cb17-297" aria-hidden="true" tabindex="-1"></a><span class="fu">## 1.5 Confusion matrices</span></span>
+<span id="cb17-298"><a href="#cb17-298" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb17-301"><a href="#cb17-301" aria-hidden="true" tabindex="-1"></a><span class="in">```{python}</span></span>
+<span id="cb17-302"><a href="#cb17-302" aria-hidden="true" tabindex="-1"></a><span class="co">#| label: confusion</span></span>
+<span id="cb17-303"><a href="#cb17-303" aria-hidden="true" tabindex="-1"></a><span class="co"># </span><span class="al">TODO</span><span class="co"> (you): 2×2 grid of confusion matrices, one per model.</span></span>
+<span id="cb17-304"><a href="#cb17-304" aria-hidden="true" tabindex="-1"></a><span class="co">#   Question to answer from the picture: WHERE does each model lose?</span></span>
+<span id="cb17-305"><a href="#cb17-305" aria-hidden="true" tabindex="-1"></a><span class="co">#   (e.g. does mBERT confuse neutral↔positive on rojak messages?)</span></span>
+<span id="cb17-306"><a href="#cb17-306" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
+<span id="cb17-307"><a href="#cb17-307" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb17-308"><a href="#cb17-308" aria-hidden="true" tabindex="-1"></a><span class="fu">## 1.6 RQ breakdown: rojak vs pure Malay</span></span>
+<span id="cb17-309"><a href="#cb17-309" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb17-312"><a href="#cb17-312" aria-hidden="true" tabindex="-1"></a><span class="in">```{python}</span></span>
+<span id="cb17-313"><a href="#cb17-313" aria-hidden="true" tabindex="-1"></a><span class="co">#| label: rojak-breakdown</span></span>
+<span id="cb17-314"><a href="#cb17-314" aria-hidden="true" tabindex="-1"></a><span class="co"># </span><span class="al">TODO</span><span class="co"> (you): classify test messages as rojak (contains English tokens)</span></span>
+<span id="cb17-315"><a href="#cb17-315" aria-hidden="true" tabindex="-1"></a><span class="co">#   vs pure Malay; compute per-group accuracy for each model.</span></span>
+<span id="cb17-316"><a href="#cb17-316" aria-hidden="true" tabindex="-1"></a><span class="co">#   This is the section that directly tests the hypothesis and answers "why XLM-R".</span></span>
+<span id="cb17-317"><a href="#cb17-317" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
+<span id="cb17-318"><a href="#cb17-318" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb17-319"><a href="#cb17-319" aria-hidden="true" tabindex="-1"></a><span class="fu">## 1.7 Decision</span></span>
+<span id="cb17-320"><a href="#cb17-320" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb17-323"><a href="#cb17-323" aria-hidden="true" tabindex="-1"></a><span class="in">```{python}</span></span>
+<span id="cb17-324"><a href="#cb17-324" aria-hidden="true" tabindex="-1"></a><span class="co">#| label: decision-sentiment</span></span>
+<span id="cb17-325"><a href="#cb17-325" aria-hidden="true" tabindex="-1"></a><span class="co"># </span><span class="al">TODO</span><span class="co"> (you): summarize — which model wins which requirement (R1-R5)?</span></span>
+<span id="cb17-326"><a href="#cb17-326" aria-hidden="true" tabindex="-1"></a><span class="co">#   If XLM-R wins: quantify by how much. If a baseline ties: say so honestly.</span></span>
+<span id="cb17-327"><a href="#cb17-327" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
+<span id="cb17-328"><a href="#cb17-328" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb17-329"><a href="#cb17-329" aria-hidden="true" tabindex="-1"></a><span class="fu"># Part 3 — Why BERTopic?</span></span>
+<span id="cb17-330"><a href="#cb17-330" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb17-333"><a href="#cb17-333" aria-hidden="true" tabindex="-1"></a><span class="in">```{python}</span></span>
+<span id="cb17-334"><a href="#cb17-334" aria-hidden="true" tabindex="-1"></a><span class="co">#| label: topic-setup</span></span>
+<span id="cb17-335"><a href="#cb17-335" aria-hidden="true" tabindex="-1"></a><span class="co"># </span><span class="al">TODO</span><span class="co"> (you): the topic-modeling defense is different from sentiment's.</span></span>
+<span id="cb17-336"><a href="#cb17-336" aria-hidden="true" tabindex="-1"></a><span class="co">#   Sentiment has labels → supervised comparison. Topic modeling has NO labels</span></span>
+<span id="cb17-337"><a href="#cb17-337" aria-hidden="true" tabindex="-1"></a><span class="co">#   → the justification is architectural:</span></span>
+<span id="cb17-338"><a href="#cb17-338" aria-hidden="true" tabindex="-1"></a><span class="co">#     1. Why topic modeling at all (vs. keyword rules alone) — the 88 ambiguous</span></span>
+<span id="cb17-339"><a href="#cb17-339" aria-hidden="true" tabindex="-1"></a><span class="co">#        messages that rules couldn't decide (Run 7/8 evidence)</span></span>
+<span id="cb17-340"><a href="#cb17-340" aria-hidden="true" tabindex="-1"></a><span class="co">#     2. Why BERTopic specifically:</span></span>
+<span id="cb17-341"><a href="#cb17-341" aria-hidden="true" tabindex="-1"></a><span class="co">#        - transformer embeddings = semantics, not string matching</span></span>
+<span id="cb17-342"><a href="#cb17-342" aria-hidden="true" tabindex="-1"></a><span class="co">#          (the 'tidur' → Sleep Patterns win in Run 8c)</span></span>
+<span id="cb17-343"><a href="#cb17-343" aria-hidden="true" tabindex="-1"></a><span class="co">#        - UMAP+HDBSCAN = density clustering that allows outliers (-1)</span></span>
+<span id="cb17-344"><a href="#cb17-344" aria-hidden="true" tabindex="-1"></a><span class="co">#          vs k-means forcing every point into a cluster</span></span>
+<span id="cb17-345"><a href="#cb17-345" aria-hidden="true" tabindex="-1"></a><span class="co">#        - c-TF-IDF = interpretable topic names (admin can promote/review)</span></span>
+<span id="cb17-346"><a href="#cb17-346" aria-hidden="true" tabindex="-1"></a><span class="co">#        - hybrid pipeline: coverage override + cluster inheritance + fallback</span></span>
+<span id="cb17-347"><a href="#cb17-347" aria-hidden="true" tabindex="-1"></a><span class="co">#   </span><span class="al">TODO</span><span class="co">: compute topic coherence (c_v) on the trained model as the quantitative</span></span>
+<span id="cb17-348"><a href="#cb17-348" aria-hidden="true" tabindex="-1"></a><span class="co">#   evidence, plus cluster size distribution chart.</span></span>
+<span id="cb17-349"><a href="#cb17-349" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
+<span id="cb17-350"><a href="#cb17-350" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb17-351"><a href="#cb17-351" aria-hidden="true" tabindex="-1"></a><span class="fu"># Conclusion</span></span>
+<span id="cb17-352"><a href="#cb17-352" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb17-353"><a href="#cb17-353" aria-hidden="true" tabindex="-1"></a>TODO: the one-breath viva answer, backed by the numbers above.</span>
+<span id="cb17-354"><a href="#cb17-354" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb17-355"><a href="#cb17-355" aria-hidden="true" tabindex="-1"></a><span class="fu">## References {.unnumbered}</span></span>
+<span id="cb17-356"><a href="#cb17-356" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb17-357"><a href="#cb17-357" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>Conneau et al. (2020), *Unsupervised Cross-lingual Representation Learning at Scale* (XLM-R)</span>
+<span id="cb17-358"><a href="#cb17-358" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>Grootendorst (2022), *BERTopic: Neural topic modeling with a class-based TF-IDF procedure* (arXiv:2203.05794)</span>
+<span id="cb17-359"><a href="#cb17-359" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>Devlin et al. (2019), BERT; Wilkinson et al. (2021), IndoBERT (IndoNLU)</span>
+<span id="cb17-360"><a href="#cb17-360" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>Sanh et al. (2019), DistilBERT</span>
+<span id="cb17-361"><a href="#cb17-361" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>Wilson, Wiebe &amp; Hoffmann (2005), *Recognizing Contextual Polarity in Phrase-Level Sentiment Analysis*, HLT/EMNLP — prior vs contextual polarity</span>
+<span id="cb17-362"><a href="#cb17-362" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>Omar et al. (2017), *Minimally-Supervised Sentiment Lexicon Induction Model: A Case Study of Malay Sentiment Analysis*, Springer — state of Malay lexicon resources</span>
+<span id="cb17-363"><a href="#cb17-363" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>Noor, Sapuan &amp; Bond (2011), *WordNet Bahasa* — Malay semantic network (not a sentiment lexicon)</span>
+</code></pre></div><button title="Copy to Clipboard" class="code-copy-button" data-in-quarto-modal=""><i class="bi"></i></button></div>
+</div></div></div></div></div>
+</div> <!-- /content -->
+
+
+
+
+</body></html>
