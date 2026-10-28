@@ -1,0 +1,26 @@
+project:
+  type: website
+  output-dir: _site
+  render:
+    - model_evaluation.qmd
+    - rag_evaluation.qmd
+
+website:
+  title: "Sentiri Evaluation"
+  navbar:
+    left:
+      - text: "Model Evaluation"
+        href: model_evaluation.qmd
+      - text: "RAG Evaluation"
+        href: rag_evaluation.qmd
+
+format:
+  html:
+    theme: cosmo
+    toc: true
+    toc-depth: 3
+    code-fold: true
+    code-tools: true
+    execute:
+      echo: true
+      warning: false

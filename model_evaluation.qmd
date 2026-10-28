@@ -14,6 +14,8 @@ format:
       echo: true
       warning: false
 jupyter: jupyter_env
+cache: true          # project-level switch: enables jupyter-cache for cells
+                    # carrying `#| cache: true` (heavy model cells only).
 ---
 
 # Introduction {.unnumbered}
@@ -345,6 +347,10 @@ model in a vacuum.
 ```{python}
 #| label: train-xlmr
 #| output: false
+#| cache: true
+# Cache: heavy checkpoint-loading cell — Quarto reuses stored output unless
+# this cell's CODE changes. External data changes do NOT invalidate it,
+# so never point a cached cell at files you expect to edit (e.g. gold sets).
 # This cell loads the ALREADY-TRAINED checkpoint from runs/xlmr_best.
 # Training was done once (3 epochs, lr 2e-5, bs 16, seed=42 — the recipe in
 # §2.1) and the best checkpoint was saved. Re-running training on every render
@@ -432,6 +438,9 @@ print(f"  predictions: {pd.Series(p_traps_xlmr).map(LABELS).value_counts().to_di
 ```{python}
 #| label: train-baselines
 #| output: false
+#| cache: true
+# Cache: loads 3 saved checkpoints (~30s+) — output reused across renders
+# unless this cell's code changes.
 # Same recipe — ONLY the checkpoint changes (fairness rule).
 # All baselines were trained with the same §2.1 recipe and saved to runs/<id>_best.
 # We load the saved checkpoints and run inference — no re-training.

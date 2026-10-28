@@ -10,6 +10,7 @@ model_evaluation_files/
 *.quarto_ipynb
 *.quarto_ipynb_1
 .jupytercache/
+.jupyter_cache/
 .quarto/
 
 # ── Python ───────────────────────────────────────────────────────
@@ -24,3 +25,6 @@ venv/
 # ── OS junk ──────────────────────────────────────────────────────
 .DS_Store
 Thumbs.db
+
+/.quarto/
+**/*.quarto_ipynb

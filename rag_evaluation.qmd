@@ -1,0 +1,154 @@
+---
+title: "Sentiri RAG Evaluation — Does the Chatbot Retrieve the Right Evidence?"
+subtitle: "Retrieval & faithfulness measurement for the autism-clinic knowledge chatbot"
+author: "Nik Abdul Aqmal"
+date: today
+jupyter: jupyter_env
+---
+
+# Introduction {.unnumbered}
+
+**The question this page answers:** does Sentiri's RAG chatbot retrieve the
+*right* evidence and answer *from* it — measured, not assumed?
+
+The [model evaluation page](model_evaluation.qmd) defends model choices
+(XLM-R vs. alternatives, BERTopic vs. alternatives) with labeled-data
+comparison. The RAG pipeline cannot be defended that way: there is no
+"test split" for retrieval. The defense here is **measurement against a
+hand-built gold set**: retrieval ranked metrics, generation faithfulness,
+and failure analysis.
+
+## The pipeline under evaluation
+
+```
+question → embed (MiniLM multilingual)
+         → ChromaDB cosine top-20          ── dense recall (cheap, broad)
+         → cross-encoder rerank → top-5    ── precision (slow, sharp)
+         → grounded LLM answer + citations ── generation (Groq)
+```
+
+Two stages fail in different ways — retrieval misses the evidence,
+generation ignores or overreaches it — so each is evaluated separately.
+
+## Requirements that drive RAG evaluation
+
+| # | Requirement | Consequence for evaluation |
+|---|---|---|
+| R1 | Parent questions in Malay / rojak; documents in Malay & English | Gold set must include code-switched queries, not just clean English |
+| R2 | Medical-adjacent domain: hallucinated therapy advice is the worst failure mode | Faithfulness (answer grounded in retrieved chunks) is the priority generation metric |
+| R3 | Therapists must verify every claim against the source | Citations must point at real, retrievable chunks — retrieval quality is upstream of trust |
+| R4 | The system must know when it does not know | Refusal accuracy on out-of-domain questions is measured explicitly |
+| R5 | Production configuration: retrieve-20 → rerank-5, chunk 1000/200, cosine | Config constants are evaluated as-is, then challenged in the failure analysis |
+
+**What is NOT evaluated here:** latency, concurrent load, embedding-model
+comparison (single-model pipeline), or Celery ingestion behavior. Scope is
+retrieval quality + generation faithfulness on the treatment-document
+knowledge base.
+
+# The gold set
+
+`gold_set_rag.json` — N questions hand-annotated with the chunk IDs that
+contain the correct evidence (`doc_title` + `chunk_index` addressing, the
+same keys stored in ChromaDB metadata).
+
+Design rules:
+
+- Real parent-style questions, drawn from what the clinic chatbot actually
+  receives — including Malay-English code-switching (R1).
+- 2–3 difficulty tiers: direct lookup, multi-hop (answer spans two chunks),
+  and paraphrase (question shares no keywords with the evidence).
+- **Adversarial out-of-domain questions** — plausible-sounding questions the
+  documents cannot answer. The correct behavior is the refusal line
+  ("Saya tidak mempunyai maklumat..."), and these questions measure whether
+  the system knows when it does not know (R4).
+
+```{python}
+#| label: rag-gold-set-summary
+#| tbl-cap: "Gold set composition"
+import json
+from pathlib import Path
+
+if Path("gold_set_rag.json").exists():
+    with open("gold_set_rag.json") as f:
+        gold = json.load(f)
+    print(f"{len(gold)} questions loaded — composition table pending annotation.")
+else:
+    print("gold_set_rag.json not built yet — this cell will fill in once the")
+    print("gold set exists (see The gold set section for the design rules).")
+```
+
+# Retrieval evaluation
+
+Ranked-retrieval metrics, computed twice — **dense-only (top-20) vs.
+dense+rerank (top-5)** — on the same gold set, the same fairness rule as
+the model-evaluation page: only the pipeline stage changes.
+
+| Metric | Question it answers | Formula |
+|---|---|---|
+| Hit@k | Is any gold chunk in the top-k? | mean over questions of 1[found] |
+| MRR | How high does the *first* gold chunk rank? | mean of 1/rank_first_gold (0 if never) |
+| Precision@k | How much noise feeds the LLM? | \|top-k ∩ gold\| / k (lower bound: gold annotation not exhaustive) |
+
+The dense vs. rerank delta is the ablation that matters: it is the evidence
+for whether the cross-encoder earns its latency (R5).
+
+```{python}
+#| label: rag-retrieval-metrics
+#| tbl-cap: "Retrieval metrics — dense-only vs dense+rerank"
+# TODO(nik): run scripts/eval_rag.py once, it saves rag_eval_results.json;
+# this cell loads and renders it (same pattern as eval_results.json on the
+# model-evaluation page — never re-run heavy work inside the render).
+print("Pending eval_rag.py — metrics table will render from rag_eval_results.json.")
+```
+
+# Generation evaluation
+
+**Faithfulness (LLM-as-judge).** For each question, the judge receives the
+retrieved context and the produced answer — not the system prompt — and
+lists every factual claim, marking each as supported or unsupported by the
+context. Faithfulness = supported / total claims.
+
+**Refusal accuracy.** On adversarial questions: correct only if the answer
+refuses AND does not answer anyway. The inverse failure — refusing valid
+questions (false refusal) — is reported too, because a system that says
+"I don't know" to everything is useless even if it never hallucinates.
+
+```{python}
+#| label: rag-generation-metrics
+#| tbl-cap: "Faithfulness and refusal accuracy"
+print("Pending generation eval — faithfulness + refusal table will render here.")
+```
+
+# Failure analysis: the worst five
+
+The five questions where the pipeline ranked gold evidence lowest — each
+with a diagnosis: **chunking miss** (evidence split across chunks),
+**embedding miss** (semantics too far), **lexical trap** (keyword-matching
+retrieved the wrong section), or **rerank displacement** (cross-encoder
+demoted the gold chunk). This section is the input to the next pipeline
+iteration — the same role the trap-subset analysis plays on the
+model-evaluation page.
+
+```{python}
+#| label: rag-worst-five
+#| tbl-cap: "The five worst-retrieved questions, with diagnosis"
+print("Pending eval results — worst-five table will render here.")
+```
+
+# Limitations {.unnumbered}
+
+- Precision@k is a **lower bound**: gold annotation marks the best chunks,
+  not every relevant one.
+- The gold set is small (N questions) and built by one annotator — the
+  project author. Reporting exact numbers with honest confidence beats a
+  larger set built carelessly.
+- Faithfulness uses an LLM as judge; judge errors are possible and the judge
+  scores are not human-verified.
+- Retrieval eval measures ranking quality on a frozen collection state;
+  production ingests new documents continuously.
+
+# Conclusion
+
+*To be written once the numbers exist — one-breath answer format, same as
+the model-evaluation page: what was measured, what the pipeline does well,
+where it fails, and what the next iteration changes.*
