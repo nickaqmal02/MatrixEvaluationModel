@@ -17,6 +17,12 @@ website:
 format:
   html:
     theme: cosmo
+    font:
+      mainfont: "Source Serif 4"
+      sansfont: "Inter"
+      monofont: "JetBrains Mono"
+      fontsize: 1.05em
+      line-height: 1.7
     toc: true
     toc-depth: 3
     code-fold: true

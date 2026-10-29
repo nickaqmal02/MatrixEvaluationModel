@@ -92,13 +92,87 @@ the model-evaluation page: only the pipeline stage changes.
 The dense vs. rerank delta is the ablation that matters: it is the evidence
 for whether the cross-encoder earns its latency (R5).
 
+## The headline finding: the reranker is not earning its latency
+
+Dense retrieval is excellent: **hit@20 is perfect** — for all 11 real
+questions, the embedding model places at least one gold chunk inside the
+top-20 candidates. The funnel mouth never misses.
+
+The cross-encoder rerank then **reduces** quality: MRR drops from
+0.56 to 0.44, and 4 of 11 questions lose gold from the top-5 entirely.
+The failure mode is *displacement*: dense retrieval hands the reranker
+gold in strong positions (rank 1, 3, 4) and the cross-encoder demotes it
+below rank 5. Worst case — *"why does my autistic child only want to eat
+one brand of food"* — gold sat at **dense rank 1** and rerank pushed it
+out of the top 5.
+
+The failures are not language-bound (2 English, 2 Malay), so
+"English-trained reranker (ms-marco-MiniLM) struggles with Malay" is only
+part of the diagnosis. The reranker is also *credited* with two
+rank-3 → rank-1 rescues — it wins some questions and loses others, net
+negative on this gold set.
+
+## Improvements, in evidence order
+
+1. **Equal-k comparison first**: score dense top-5 vs rerank top-5 on the
+   same footing before any removal decision (the harness supports this
+   with two extra metric calls).
+2. **Swap the cross-encoder** for a multilingual reranker (BGE-m3
+   family) and re-run — the eval harness makes this a one-line change
+   plus one 37-second re-run. The numbers decide.
+3. **Gate rerank by question language** if the swap does not close the
+   gap.
+
+## Adversarial questions: retrieval cannot detect them
+
+Both adversarial questions retrieve chunks with similarity **0.79–0.85** —
+nearly as high as real questions. With `SCORE_THRESHOLD = 0.2`, the
+retrieval layer passes them through confidently; the only barrier to a
+hallucinated answer (invented therapy costs) is the LLM choosing to
+refuse. Refusal accuracy is therefore a generation-layer metric, not a
+retrieval one.
+
 ```{python}
 #| label: rag-retrieval-metrics
-#| tbl-cap: "Retrieval metrics — dense-only vs dense+rerank"
-# TODO(nik): run scripts/eval_rag.py once, it saves rag_eval_results.json;
-# this cell loads and renders it (same pattern as eval_results.json on the
-# model-evaluation page — never re-run heavy work inside the render).
-print("Pending eval_rag.py — metrics table will render from rag_eval_results.json.")
+#| tbl-cap: "Retrieval metrics — dense-only vs dense+rerank, equal-k where it matters"
+import json
+import pandas as pd
+
+with open("rag_eval_results.json") as f:
+    res = json.load(f)
+agg = res["aggregate"]
+
+# Collect-then-score: the equal-k dense metrics are recomputed from the
+# saved evidence (dense_ranked_ids per record) — no pipeline re-run needed.
+def hit_at_k(ranked_ids: list[str], gold_ids: list[str], k: int) -> int:
+    return 1 if set(gold_ids) & set(ranked_ids[:k]) else 0
+
+def precision_at_k(ranked_ids: list[str], gold_ids: list[str], k: int) -> float:
+    return len(set(ranked_ids[:k]) & set(gold_ids)) / k
+
+real = [r for r in res["records"] if not r["adversarial"]]
+dense_hit5 = sum(hit_at_k(r["dense_ranked_ids"], r["gold_chunk_ids"], 5) for r in real) / len(real)
+dense_p5 = sum(precision_at_k(r["dense_ranked_ids"], r["gold_chunk_ids"], 5) for r in real) / len(real)
+
+# Every number followed by its interpretation — the table argues,
+# not just reports.
+df = pd.DataFrame([
+    {"Metric": "Hit@20", "Dense only": agg["hit@20"], "Dense + rerank": None,
+     "Reading": "perfect — gold reaches the top-20 for all 11 real questions"},
+    {"Metric": "Hit@5", "Dense only": dense_hit5, "Dense + rerank": agg["hit@5"],
+     "Reading": "4/11 questions lose gold from the top-5 after reranking"},
+    {"Metric": "MRR", "Dense only": agg["mrr_dense"], "Dense + rerank": agg["mrr_rerank"],
+     "Reading": "rerank demotes gold on average — MRR drops"},
+    {"Metric": "Precision@5", "Dense only": dense_p5, "Dense + rerank": agg["precision@5"],
+     "Reading": "lower bound — gold annotation is not exhaustive"},
+])
+
+styler = (df.style
+    .hide(axis="index")
+    .format(precision=2, na_rep="—")
+    .set_properties(subset=["Reading"], **{"text-align": "left", "white-space": "normal"})
+)
+styler
 ```
 
 # Generation evaluation
