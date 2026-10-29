@@ -338,7 +338,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </section>
 <section id="setup" class="level1 unnumbered">
 <h1 class="unnumbered">Setup</h1>
-<div id="setup" class="cell" data-context="setup" data-execution_count="2">
+<div id="setup" class="cell" data-context="setup" data-execution_count="1">
 <details class="code-fold">
 <summary>Code</summary>
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb1"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> warnings</span>
@@ -369,7 +369,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <span id="cb1-26"><a href="#cb1-26" aria-hidden="true" tabindex="-1"></a>LABELS <span class="op">=</span> {<span class="dv">0</span>: <span class="st">"negative"</span>, <span class="dv">1</span>: <span class="st">"neutral"</span>, <span class="dv">2</span>: <span class="st">"positive"</span>}</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </details>
 </div>
-<div class="cell" data-tbl-cap="Dataset and the single evaluation split used throughout this report" data-execution_count="3">
+<div class="cell" data-tbl-cap="Dataset and the single evaluation split used throughout this report" data-execution_count="2">
 <details class="code-fold">
 <summary>Code</summary>
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb2"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> sklearn.model_selection <span class="im">import</span> train_test_split</span>
@@ -472,7 +472,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <section id="the-lexicon-files-the-cleaners-knowledge-base" class="level2">
 <h2 class="anchored" data-anchor-id="the-lexicon-files-the-cleaners-knowledge-base">The lexicon files (the cleaner’s knowledge base)</h2>
 <p>The cleaner is rules + data. The <em>code</em> is ~450 lines; the <em>knowledge</em> lives in 12 curated data files under <code>chat_analyzer/data/</code>. This is deliberate: domain experts (admin) can improve the pipeline by editing data, not code.</p>
-<div class="cell" data-tbl-cap="Curated lexicon files backing the cleaning pipeline" data-execution_count="4">
+<div class="cell" data-tbl-cap="Curated lexicon files backing the cleaning pipeline" data-execution_count="3">
 <details class="code-fold">
 <summary>Code</summary>
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb3"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> json</span>
@@ -586,7 +586,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </section>
 <section id="before-after-on-real-messages" class="level2">
 <h2 class="anchored" data-anchor-id="before-after-on-real-messages">Before / after on real messages</h2>
-<div id="cell-cleaning-demo" class="cell" data-execution_count="5">
+<div id="cell-cleaning-demo" class="cell" data-execution_count="4">
 <details class="code-fold">
 <summary>Code</summary>
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb4"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> json</span>
@@ -646,7 +646,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <section id="contextual-polarity-flips-the-measured-failure-mode" class="level2">
 <h2 class="anchored" data-anchor-id="contextual-polarity-flips-the-measured-failure-mode">1.2 Contextual polarity flips — the measured failure mode</h2>
 <p>A lexicon assigns each word a <strong>prior polarity</strong> (dictionary meaning). But words carry their <strong>contextual polarity</strong> from the sentence. In therapy-progress chats, this gap is not an edge case — we measured it:</p>
-<div id="cell-lexicon-traps" class="cell" data-tbl-cap="Negative-labeled messages that contain dictionary-positive words" data-execution_count="6">
+<div id="cell-lexicon-traps" class="cell" data-tbl-cap="Negative-labeled messages that contain dictionary-positive words" data-execution_count="5">
 <details class="code-fold">
 <summary>Code</summary>
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb5"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="co"># df_raw / train_df / test_df come from the data-split cell (shared split).</span></span>
@@ -725,7 +725,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </section>
 <section id="lexicon-baseline-results" class="level2">
 <h2 class="anchored" data-anchor-id="lexicon-baseline-results">1.4 Lexicon baseline results</h2>
-<div id="cell-lexicon-baseline" class="cell" data-execution_count="7">
+<div id="cell-lexicon-baseline" class="cell" data-execution_count="6">
 <details class="code-fold">
 <summary>Code</summary>
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb8"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Lexicon baseline: the strongest lexicon approach this domain could have.</span></span>
@@ -861,7 +861,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </section>
 <section id="fine-tune-xlm-r-the-incumbent" class="level2">
 <h2 class="anchored" data-anchor-id="fine-tune-xlm-r-the-incumbent">2.2 Fine-tune XLM-R (the incumbent)</h2>
-<div id="train-xlmr" class="cell" data-cache="true" data-execution_count="8">
+<div id="train-xlmr" class="cell" data-cache="true" data-execution_count="7">
 <details class="code-fold">
 <summary>Code</summary>
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb9"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Cache: heavy checkpoint-loading cell — Quarto reuses stored output unless</span></span>
@@ -918,7 +918,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <span id="cb9-52"><a href="#cb9-52" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="ss">f"XLM-R — accuracy: </span><span class="sc">{</span>xlmr_acc<span class="sc">:.3f}</span><span class="ss"> | macro-F1: </span><span class="sc">{</span>xlmr_f1<span class="sc">:.3f}</span><span class="ss"> | </span><span class="sc">{</span>params_xlmr<span class="op">/</span><span class="fl">1e6</span><span class="sc">:.0f}</span><span class="ss">M params (loaded from runs/xlmr_best)"</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </details>
 </div>
-<div id="xlmr-report" class="cell" data-execution_count="9">
+<div id="xlmr-report" class="cell" data-execution_count="8">
 <details class="code-fold">
 <summary>Code</summary>
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb10"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Per-class report + the headline comparison: XLM-R on the traps.</span></span>
@@ -969,7 +969,7 @@ weighted avg       0.88      0.88      0.87       432
 </section>
 <section id="baselines-mbert-indobert-distilbert" class="level2">
 <h2 class="anchored" data-anchor-id="baselines-mbert-indobert-distilbert">2.3 Baselines: mBERT, IndoBERT, DistilBERT</h2>
-<div id="train-baselines" class="cell" data-cache="true" data-execution_count="10">
+<div id="train-baselines" class="cell" data-cache="true" data-execution_count="9">
 <details class="code-fold">
 <summary>Code</summary>
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb13"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Cache: loads 3 saved checkpoints (~30s+) — output reused across renders</span></span>
@@ -994,7 +994,7 @@ weighted avg       0.88      0.88      0.87       432
 </section>
 <section id="metrics-matrix" class="level2">
 <h2 class="anchored" data-anchor-id="metrics-matrix">2.4 Metrics matrix</h2>
-<div class="cell" data-tbl-cap="All models, same split, same recipe — only the checkpoint differs" data-execution_count="11">
+<div class="cell" data-tbl-cap="All models, same split, same recipe — only the checkpoint differs" data-execution_count="10">
 <details class="code-fold">
 <summary>Code</summary>
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb14"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb14-1"><a href="#cb14-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> json</span>
@@ -1099,7 +1099,7 @@ weighted avg       0.88      0.88      0.87       432
 </section>
 <section id="confusion-matrices" class="level2">
 <h2 class="anchored" data-anchor-id="confusion-matrices">2.5 Confusion matrices</h2>
-<div id="cell-confusion" class="cell" data-fig-height="8" data-fig-width="10" data-execution_count="12">
+<div id="cell-confusion" class="cell" data-fig-height="8" data-fig-width="10" data-execution_count="11">
 <details class="code-fold">
 <summary>Code</summary>
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb15"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb15-1"><a href="#cb15-1" aria-hidden="true" tabindex="-1"></a><span class="co"># We reconstruct y_pred per model from eval_results.json (the saved predictions</span></span>
@@ -1164,7 +1164,7 @@ weighted avg       0.88      0.88      0.87       432
 </section>
 <section id="rq-breakdown-rojak-vs-pure-malay" class="level2">
 <h2 class="anchored" data-anchor-id="rq-breakdown-rojak-vs-pure-malay">2.6 RQ breakdown: rojak vs pure Malay</h2>
-<div class="cell" data-tbl-cap="Rojak vs pure Malay accuracy — the hypothesis test (R1)" data-execution_count="13">
+<div class="cell" data-tbl-cap="Rojak vs pure Malay accuracy — the hypothesis test (R1)" data-execution_count="12">
 <details class="code-fold">
 <summary>Code</summary>
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb17"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb17-1"><a href="#cb17-1" aria-hidden="true" tabindex="-1"></a><span class="co"># The hypothesis in the Introduction: "XLM-R wins on mixed rojak messages."</span></span>
@@ -1307,7 +1307,7 @@ weighted avg       0.88      0.88      0.87       432
 </section>
 <section id="decision" class="level2">
 <h2 class="anchored" data-anchor-id="decision">2.7 Decision</h2>
-<div class="cell" data-tbl-cap="Decision matrix — which model wins which requirement?" data-execution_count="14">
+<div class="cell" data-tbl-cap="Decision matrix — which model wins which requirement?" data-execution_count="13">
 <details class="code-fold">
 <summary>Code</summary>
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb19"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb19-1"><a href="#cb19-1" aria-hidden="true" tabindex="-1"></a><span class="co"># The honest summary. mBERT wins overall accuracy, but the choice depends on</span></span>
@@ -1410,7 +1410,7 @@ weighted avg       0.88      0.88      0.87       432
 <h2 class="anchored" data-anchor-id="why-topic-modeling-at-all-vs.-keyword-rules-alone">3.1 Why topic modeling at all (vs.&nbsp;keyword rules alone)</h2>
 <p>The initial approach — keyword matching against 12 seed keyword lists — works for unambiguous messages. But our production data shows that <strong>112 of 266 conversations (42%) are assigned to multiple topics simultaneously.</strong> These are messages whose words span multiple domains: “tantrum tidur pujuk” touches Behaviour, Sleep, and Therapy Progress at once.</p>
 <p>A pure keyword rule says “this message matches 3 topics” and stops — it cannot decide which is primary. The hybrid pipeline (coverage override → cluster inheritance → outlier fallback) resolves these ambiguities, but only because BERTopic provides the <strong>cluster structure</strong> that keyword rules lack. Without clustering, every multi-match is a tie; with clustering, the message inherits the topic of the cluster its embedding neighbors belong to.</p>
-<div class="cell" data-tbl-cap="Topic distribution in production data (266 conversations, 5 active topics)" data-execution_count="15">
+<div class="cell" data-tbl-cap="Topic distribution in production data (266 conversations, 5 active topics)" data-execution_count="14">
 <details class="code-fold">
 <summary>Code</summary>
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb20"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb20-1"><a href="#cb20-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> json</span>
@@ -1541,7 +1541,7 @@ weighted avg       0.88      0.88      0.87       432
 <section id="topic-coherence-c_v" class="level2">
 <h2 class="anchored" data-anchor-id="topic-coherence-c_v">3.3 Topic coherence (c_v)</h2>
 <p>Coherence measures whether the top words in each topic actually co-occur in the corpus — i.e., whether the topic makes semantic sense. We compute c_v using NPMI (Normalized Pointwise Mutual Information) over sliding windows, the standard approach when gensim is unavailable.</p>
-<div class="cell" data-tbl-cap="Topic coherence (c_v via NPMI) — NPMI ranges [-1,+1]; on short-text corpora negative is expected" data-execution_count="16">
+<div class="cell" data-tbl-cap="Topic coherence (c_v via NPMI) — NPMI ranges [-1,+1]; on short-text corpora negative is expected" data-execution_count="15">
 <details class="code-fold">
 <summary>Code</summary>
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb21"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb21-1"><a href="#cb21-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> re</span>
@@ -1663,7 +1663,7 @@ weighted avg       0.88      0.88      0.87       432
 <section id="cluster-size-distribution" class="level2">
 <h2 class="anchored" data-anchor-id="cluster-size-distribution">3.4 Cluster size distribution</h2>
 <p>The chart below shows how messages distribute across topics. A healthy topic model has balanced clusters — not one giant cluster swallowing everything (the Run 7 problem) and not all singletons (over-fragmentation).</p>
-<div id="cell-topic-distribution" class="cell" data-fig-height="5" data-fig-width="8" data-execution_count="17">
+<div id="cell-topic-distribution" class="cell" data-fig-height="5" data-fig-width="8" data-execution_count="16">
 <details class="code-fold">
 <summary>Code</summary>
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb22"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb22-1"><a href="#cb22-1" aria-hidden="true" tabindex="-1"></a>topic_names <span class="op">=</span> [t[<span class="st">"name"</span>].replace(<span class="st">" and "</span>, <span class="st">"</span><span class="ch">\n</span><span class="st">&amp; "</span>) <span class="cf">for</span> t <span class="kw">in</span> topic_data[<span class="st">"topics"</span>]]</span>
