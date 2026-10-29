@@ -1,0 +1,79 @@
+[
+  {"id": 1,
+   "question": "cara meningkatkan kemahiran bertutur anak autism?",
+   "gold_chunk_ids": ["ab083244_0", "ab083244_1"],
+   "lang": "ms", "difficulty": "easy", "adversarial": false,
+   "notes": "pengenalan (importance) + matlamat terapi (artikulasi, vocab, turn-taking)"},
+
+  {"id": 2,
+   "question": "anak saya tak reti tunggu giliran bercakap, macam mana nak ajar?",
+   "gold_chunk_ids": ["ab083244_1"],
+   "lang": "rojak", "difficulty": "medium", "adversarial": false,
+   "notes": "turn-taking goal — PARAPHRASE test: question says 'tunggu giliran', doc says 'gilir bercakap'"},
+
+  {"id": 3,
+   "question": "what is PECS and how does it help non-verbal children?",
+   "gold_chunk_ids": ["ab083244_2"],
+   "lang": "en", "difficulty": "easy", "adversarial": false,
+   "notes": "English question, Malay doc — cross-lingual retrieval test; PECS/AAC content"},
+
+  {"id": 4,
+   "question": "anak saya belum boleh bercakap langsung, ada alat yang boleh tolong dia communicate?",
+   "gold_chunk_ids": ["ab083244_2"],
+   "lang": "ms", "difficulty": "medium", "adversarial": false,
+   "notes": "AAC devices — paraphrase: 'alat' not 'peranti'; same chunk as Q3 by design (different phrasings must reach same evidence)"},
+
+  {"id": 5,
+   "question": "apa aktiviti yang ibu bapa boleh buat di rumah untuk bantu anak?",
+   "gold_chunk_ids": ["ab083244_2"],
+   "lang": "ms", "difficulty": "medium", "adversarial": false,
+   "notes": "floor time / play-based therapy — VERIFY: check full text of ab083244_2 covers home activities; adjust if the home-training list lives elsewhere"},
+
+  {"id": 6,
+   "question": "berapa kerap anak autism perlu attend sesi terapi pertuturan?",
+   "gold_chunk_ids": ["ab083244_3"],
+   "lang": "rojak", "difficulty": "easy", "adversarial": false,
+   "notes": "REWRITTEN from progress-tracking to frequency/duration — '2-3 kali seminggu, 45min-1jam' is explicitly in ab083244_3"},
+
+  {"id": 7,
+   "question": "kenapa anak autism saya suka menjerit bila nak barang?",
+   "gold_chunk_ids": ["5eba3fda_1", "5eba3fda_2"],
+   "lang": "ms", "difficulty": "hard", "adversarial": false,
+   "notes": "MULTI-DOC test: screaming-as-communication belongs to the behaviour doc (tantrum + function + replacement teaching), not the speech doc — tests whether retrieval finds the right DOC, not just topic-adjacent"},
+
+  {"id": 8,
+   "question": "sebutan anak saya tak clear, apa latihan untuk articulation?",
+   "gold_chunk_ids": ["ab083244_1"],
+   "lang": "ms", "difficulty": "medium", "adversarial": false,
+   "notes": "articulation goal — VERIFY: confirm full text of ab083244_1 mentions artikulasi/sebutan"},
+
+  {"id": 9,
+   "question": "berapa kos sesi terapi pertuturan di Malaysia?",
+   "gold_chunk_ids": [],
+   "lang": "ms", "difficulty": "na", "adversarial": true,
+   "notes": "prices not in any doc — correct behavior = refusal. Borderline trap: duration/frequency IS in ab083244_3, cost is not"},
+
+  {"id": 10,
+   "question": "anak saya ada tanda autism, umur berapa patluh start intervention?",
+   "gold_chunk_ids": [],
+   "lang": "rojak", "difficulty": "na", "adversarial": true,
+   "notes": "diagnosis/age guidance not in any doc — refusal test"},
+
+  {"id": 11,
+   "question": "anak saya tolak sayur sebab tekstur, apa nak buat?",
+   "gold_chunk_ids": ["e21fed4e_1"],
+   "lang": "ms", "difficulty": "medium", "adversarial": false,
+   "notes": "NEW — feeding doc: sensory texture rejection"},
+
+  {"id": 12,
+   "question": "why does my autistic child only want to eat one brand of food?",
+   "gold_chunk_ids": ["e21fed4e_1"],
+   "lang": "en", "difficulty": "medium", "adversarial": false,
+   "notes": "NEW — feeding doc: brand rigidity ('nasi putih dengan satu jenama sos')"},
+
+  {"id": 13,
+   "question": "berapa peratus kanak-kanak autism ada masalah pemakanan?",
+   "gold_chunk_ids": ["e21fed4e_0"],
+   "lang": "ms", "difficulty": "easy", "adversarial": false,
+   "notes": "NEW — feeding doc intro: the 70-90% statistic"}
+]
