@@ -1,5 +1,5 @@
 ---
-title: "Sentiri RAG Evaluation — Does the Chatbot Retrieve the Right Evidence?"
+title: "Sentiri RAG Evaluation Does the Chatbot Retrieve the Right Evidence?"
 subtitle: "Retrieval & faithfulness measurement for the autism-clinic knowledge chatbot"
 author: "Nik Abdul Aqmal"
 date: today
@@ -159,12 +159,12 @@ dense_p5 = sum(precision_at_k(r["dense_ranked_ids"], r["gold_chunk_ids"], 5) for
 df = pd.DataFrame([
     {"Metric": "Hit@20", "Dense only": agg["hit@20"], "Dense + rerank": None,
      "Reading": "perfect — gold reaches the top-20 for all 11 real questions"},
-    {"Metric": "Hit@5", "Dense only": dense_hit5, "Dense + rerank": agg["hit@5"],
+    {"Metric": "Hit@5", "Dense only": agg["hit@5"], "Dense + rerank": agg["hit@5_rerank"],
      "Reading": "4/11 questions lose gold from the top-5 after reranking"},
     {"Metric": "MRR", "Dense only": agg["mrr_dense"], "Dense + rerank": agg["mrr_rerank"],
      "Reading": "rerank demotes gold on average — MRR drops"},
-    {"Metric": "Precision@5", "Dense only": dense_p5, "Dense + rerank": agg["precision@5"],
-     "Reading": "lower bound — gold annotation is not exhaustive"},
+    {"Metric": "Precision@5", "Dense only": agg["precision@5"], "Dense + rerank": agg["precision@5_rerank"],
+     "Reading": "precision@k is capped at 1/k"},
 ])
 
 styler = (df.style
@@ -173,7 +173,13 @@ styler = (df.style
     .set_properties(subset=["Reading"], **{"text-align": "left", "white-space": "normal"})
 )
 styler
+
+
 ```
+
+
+
+"**precision@5** is low because each question has only ~1-2 gold chunks, so the metric is capped at |gold|/5 = 0.2 it measures how much of the top-5 window is gold not wether retrieval found the right chunk ('thats hit@5'). observed 0.164 approximately around 0.82 x 0.2, consistent with hit@5 = 0.82"
 
 # Generation evaluation
 

@@ -7,9 +7,9 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
 
 <meta name="author" content="Nik Abdul Aqmal">
-<meta name="dcterms.date" content="2026-10-30">
+<meta name="dcterms.date" content="2026-11-03">
 
-<title>Sentiri RAG Evaluation — Does the Chatbot Retrieve the Right Evidence? – Sentiri Evaluation</title>
+<title>Sentiri RAG Evaluation Does the Chatbot Retrieve the Right Evidence? – Sentiri Evaluation</title>
 <style>
 /* Default styles provided by pandoc.
 ** See https://pandoc.org/MANUAL.html#variables-for-html for config info.
@@ -182,7 +182,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 
 <header id="title-block-header" class="quarto-title-block default">
 <div class="quarto-title">
-<div class="quarto-title-block"><div><h1 class="title">Sentiri RAG Evaluation — Does the Chatbot Retrieve the Right Evidence?</h1><button type="button" class="btn code-tools-button dropdown-toggle" id="quarto-code-tools-menu" data-bs-toggle="dropdown" aria-expanded="false"><i class="bi"></i> Code</button><ul class="dropdown-menu dropdown-menu-end" aria-labelelledby="quarto-code-tools-menu"><li><a id="quarto-show-all-code" class="dropdown-item" href="javascript:void(0)" role="button">Show All Code</a></li><li><a id="quarto-hide-all-code" class="dropdown-item" href="javascript:void(0)" role="button">Hide All Code</a></li><li><hr class="dropdown-divider"></li><li><a id="quarto-view-source" class="dropdown-item" href="javascript:void(0)" role="button">View Source</a></li></ul></div></div>
+<div class="quarto-title-block"><div><h1 class="title">Sentiri RAG Evaluation Does the Chatbot Retrieve the Right Evidence?</h1><button type="button" class="btn code-tools-button dropdown-toggle" id="quarto-code-tools-menu" data-bs-toggle="dropdown" aria-expanded="false"><i class="bi"></i> Code</button><ul class="dropdown-menu dropdown-menu-end" aria-labelelledby="quarto-code-tools-menu"><li><a id="quarto-show-all-code" class="dropdown-item" href="javascript:void(0)" role="button">Show All Code</a></li><li><a id="quarto-hide-all-code" class="dropdown-item" href="javascript:void(0)" role="button">Hide All Code</a></li><li><hr class="dropdown-divider"></li><li><a id="quarto-view-source" class="dropdown-item" href="javascript:void(0)" role="button">View Source</a></li></ul></div></div>
 <p class="subtitle lead">Retrieval &amp; faithfulness measurement for the autism-clinic knowledge chatbot</p>
 </div>
 
@@ -200,7 +200,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
     <div>
     <div class="quarto-title-meta-heading">Published</div>
     <div class="quarto-title-meta-contents">
-      <p class="date">October 30, 2026</p>
+      <p class="date">November 3, 2026</p>
     </div>
   </div>
   
@@ -377,12 +377,12 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <span id="cb4-22"><a href="#cb4-22" aria-hidden="true" tabindex="-1"></a>df <span class="op">=</span> pd.DataFrame([</span>
 <span id="cb4-23"><a href="#cb4-23" aria-hidden="true" tabindex="-1"></a>    {<span class="st">"Metric"</span>: <span class="st">"Hit@20"</span>, <span class="st">"Dense only"</span>: agg[<span class="st">"hit@20"</span>], <span class="st">"Dense + rerank"</span>: <span class="va">None</span>,</span>
 <span id="cb4-24"><a href="#cb4-24" aria-hidden="true" tabindex="-1"></a>     <span class="st">"Reading"</span>: <span class="st">"perfect — gold reaches the top-20 for all 11 real questions"</span>},</span>
-<span id="cb4-25"><a href="#cb4-25" aria-hidden="true" tabindex="-1"></a>    {<span class="st">"Metric"</span>: <span class="st">"Hit@5"</span>, <span class="st">"Dense only"</span>: dense_hit5, <span class="st">"Dense + rerank"</span>: agg[<span class="st">"hit@5"</span>],</span>
+<span id="cb4-25"><a href="#cb4-25" aria-hidden="true" tabindex="-1"></a>    {<span class="st">"Metric"</span>: <span class="st">"Hit@5"</span>, <span class="st">"Dense only"</span>: agg[<span class="st">"hit@5"</span>], <span class="st">"Dense + rerank"</span>: agg[<span class="st">"hit@5_rerank"</span>],</span>
 <span id="cb4-26"><a href="#cb4-26" aria-hidden="true" tabindex="-1"></a>     <span class="st">"Reading"</span>: <span class="st">"4/11 questions lose gold from the top-5 after reranking"</span>},</span>
 <span id="cb4-27"><a href="#cb4-27" aria-hidden="true" tabindex="-1"></a>    {<span class="st">"Metric"</span>: <span class="st">"MRR"</span>, <span class="st">"Dense only"</span>: agg[<span class="st">"mrr_dense"</span>], <span class="st">"Dense + rerank"</span>: agg[<span class="st">"mrr_rerank"</span>],</span>
 <span id="cb4-28"><a href="#cb4-28" aria-hidden="true" tabindex="-1"></a>     <span class="st">"Reading"</span>: <span class="st">"rerank demotes gold on average — MRR drops"</span>},</span>
-<span id="cb4-29"><a href="#cb4-29" aria-hidden="true" tabindex="-1"></a>    {<span class="st">"Metric"</span>: <span class="st">"Precision@5"</span>, <span class="st">"Dense only"</span>: dense_p5, <span class="st">"Dense + rerank"</span>: agg[<span class="st">"precision@5"</span>],</span>
-<span id="cb4-30"><a href="#cb4-30" aria-hidden="true" tabindex="-1"></a>     <span class="st">"Reading"</span>: <span class="st">"lower bound — gold annotation is not exhaustive"</span>},</span>
+<span id="cb4-29"><a href="#cb4-29" aria-hidden="true" tabindex="-1"></a>    {<span class="st">"Metric"</span>: <span class="st">"Precision@5"</span>, <span class="st">"Dense only"</span>: agg[<span class="st">"precision@5"</span>], <span class="st">"Dense + rerank"</span>: agg[<span class="st">"precision@5_rerank"</span>],</span>
+<span id="cb4-30"><a href="#cb4-30" aria-hidden="true" tabindex="-1"></a>     <span class="st">"Reading"</span>: <span class="st">"precision@k is capped at 1/k"</span>},</span>
 <span id="cb4-31"><a href="#cb4-31" aria-hidden="true" tabindex="-1"></a>])</span>
 <span id="cb4-32"><a href="#cb4-32" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb4-33"><a href="#cb4-33" aria-hidden="true" tabindex="-1"></a>styler <span class="op">=</span> (df.style</span>
@@ -394,51 +394,52 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </details>
 <div id="rag-retrieval-metrics" class="cell-output cell-output-display" data-execution_count="2">
 <style type="text/css">
-#T_66e80_row0_col3, #T_66e80_row1_col3, #T_66e80_row2_col3, #T_66e80_row3_col3 {
+#T_47172_row0_col3, #T_47172_row1_col3, #T_47172_row2_col3, #T_47172_row3_col3 {
   text-align: left;
   white-space: normal;
 }
 </style>
 
-<table id="T_66e80" class="caption-top table table-sm table-striped small">
+<table id="T_47172" class="caption-top table table-sm table-striped small">
 <caption>Retrieval metrics — dense-only vs dense+rerank, equal-k where it matters</caption>
 <thead>
 <tr class="header">
-<th id="T_66e80_level0_col0" class="col_heading level0 col0" data-quarto-table-cell-role="th">Metric</th>
-<th id="T_66e80_level0_col1" class="col_heading level0 col1" data-quarto-table-cell-role="th">Dense only</th>
-<th id="T_66e80_level0_col2" class="col_heading level0 col2" data-quarto-table-cell-role="th">Dense + rerank</th>
-<th id="T_66e80_level0_col3" class="col_heading level0 col3" data-quarto-table-cell-role="th">Reading</th>
+<th id="T_47172_level0_col0" class="col_heading level0 col0" data-quarto-table-cell-role="th">Metric</th>
+<th id="T_47172_level0_col1" class="col_heading level0 col1" data-quarto-table-cell-role="th">Dense only</th>
+<th id="T_47172_level0_col2" class="col_heading level0 col2" data-quarto-table-cell-role="th">Dense + rerank</th>
+<th id="T_47172_level0_col3" class="col_heading level0 col3" data-quarto-table-cell-role="th">Reading</th>
 </tr>
 </thead>
 <tbody>
 <tr class="odd">
-<td id="T_66e80_row0_col0" class="data row0 col0">Hit@20</td>
-<td id="T_66e80_row0_col1" class="data row0 col1">1.00</td>
-<td id="T_66e80_row0_col2" class="data row0 col2">—</td>
-<td id="T_66e80_row0_col3" class="data row0 col3">perfect — gold reaches the top-20 for all 11 real questions</td>
+<td id="T_47172_row0_col0" class="data row0 col0">Hit@20</td>
+<td id="T_47172_row0_col1" class="data row0 col1">1.00</td>
+<td id="T_47172_row0_col2" class="data row0 col2">—</td>
+<td id="T_47172_row0_col3" class="data row0 col3">perfect — gold reaches the top-20 for all 11 real questions</td>
 </tr>
 <tr class="even">
-<td id="T_66e80_row1_col0" class="data row1 col0">Hit@5</td>
-<td id="T_66e80_row1_col1" class="data row1 col1">1.00</td>
-<td id="T_66e80_row1_col2" class="data row1 col2">0.64</td>
-<td id="T_66e80_row1_col3" class="data row1 col3">4/11 questions lose gold from the top-5 after reranking</td>
+<td id="T_47172_row1_col0" class="data row1 col0">Hit@5</td>
+<td id="T_47172_row1_col1" class="data row1 col1">0.82</td>
+<td id="T_47172_row1_col2" class="data row1 col2">0.73</td>
+<td id="T_47172_row1_col3" class="data row1 col3">4/11 questions lose gold from the top-5 after reranking</td>
 </tr>
 <tr class="odd">
-<td id="T_66e80_row2_col0" class="data row2 col0">MRR</td>
-<td id="T_66e80_row2_col1" class="data row2 col1">0.56</td>
-<td id="T_66e80_row2_col2" class="data row2 col2">0.44</td>
-<td id="T_66e80_row2_col3" class="data row2 col3">rerank demotes gold on average — MRR drops</td>
+<td id="T_47172_row2_col0" class="data row2 col0">MRR</td>
+<td id="T_47172_row2_col1" class="data row2 col1">0.60</td>
+<td id="T_47172_row2_col2" class="data row2 col2">0.42</td>
+<td id="T_47172_row2_col3" class="data row2 col3">rerank demotes gold on average — MRR drops</td>
 </tr>
 <tr class="even">
-<td id="T_66e80_row3_col0" class="data row3 col0">Precision@5</td>
-<td id="T_66e80_row3_col1" class="data row3 col1">0.22</td>
-<td id="T_66e80_row3_col2" class="data row3 col2">0.13</td>
-<td id="T_66e80_row3_col3" class="data row3 col3">lower bound — gold annotation is not exhaustive</td>
+<td id="T_47172_row3_col0" class="data row3 col0">Precision@5</td>
+<td id="T_47172_row3_col1" class="data row3 col1">0.16</td>
+<td id="T_47172_row3_col2" class="data row3 col2">0.15</td>
+<td id="T_47172_row3_col3" class="data row3 col3">precision@k is capped at 1/k</td>
 </tr>
 </tbody>
 </table>
 </div>
 </div>
+<p>“<strong>precision@5</strong> is low because each question has only ~1-2 gold chunks, so the metric is capped at |gold|/5 = 0.2 it measures how much of the top-5 window is gold not wether retrieval found the right chunk (‘thats hit@5’). observed 0.164 approximately around 0.82 x 0.2, consistent with hit@5 = 0.82”</p>
 </section>
 </section>
 <section id="generation-evaluation" class="level1">
@@ -939,7 +940,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
   });
   </script><div class="modal fade" id="quarto-embedded-source-code-modal" tabindex="-1" aria-labelledby="quarto-embedded-source-code-modal-label" aria-hidden="true"><div class="modal-dialog modal-dialog-scrollable"><div class="modal-content"><div class="modal-header"><h5 class="modal-title" id="quarto-embedded-source-code-modal-label">Source Code</h5><button class="btn-close" data-bs-dismiss="modal"></button></div><div class="modal-body"><div class="">
 <div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb9" data-shortcodes="false"><pre class="sourceCode markdown code-with-copy"><code class="sourceCode markdown"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a><span class="co">---</span></span>
-<span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a><span class="an">title:</span><span class="co"> "Sentiri RAG Evaluation — Does the Chatbot Retrieve the Right Evidence?"</span></span>
+<span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a><span class="an">title:</span><span class="co"> "Sentiri RAG Evaluation Does the Chatbot Retrieve the Right Evidence?"</span></span>
 <span id="cb9-3"><a href="#cb9-3" aria-hidden="true" tabindex="-1"></a><span class="an">subtitle:</span><span class="co"> "Retrieval &amp; faithfulness measurement for the autism-clinic knowledge chatbot"</span></span>
 <span id="cb9-4"><a href="#cb9-4" aria-hidden="true" tabindex="-1"></a><span class="an">author:</span><span class="co"> "Nik Abdul Aqmal"</span></span>
 <span id="cb9-5"><a href="#cb9-5" aria-hidden="true" tabindex="-1"></a><span class="an">date:</span><span class="co"> today</span></span>
@@ -1099,12 +1100,12 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <span id="cb9-163"><a href="#cb9-163" aria-hidden="true" tabindex="-1"></a>df <span class="op">=</span> pd.DataFrame([</span>
 <span id="cb9-164"><a href="#cb9-164" aria-hidden="true" tabindex="-1"></a>    {<span class="st">"Metric"</span>: <span class="st">"Hit@20"</span>, <span class="st">"Dense only"</span>: agg[<span class="st">"hit@20"</span>], <span class="st">"Dense + rerank"</span>: <span class="va">None</span>,</span>
 <span id="cb9-165"><a href="#cb9-165" aria-hidden="true" tabindex="-1"></a>     <span class="st">"Reading"</span>: <span class="st">"perfect — gold reaches the top-20 for all 11 real questions"</span>},</span>
-<span id="cb9-166"><a href="#cb9-166" aria-hidden="true" tabindex="-1"></a>    {<span class="st">"Metric"</span>: <span class="st">"Hit@5"</span>, <span class="st">"Dense only"</span>: dense_hit5, <span class="st">"Dense + rerank"</span>: agg[<span class="st">"hit@5"</span>],</span>
+<span id="cb9-166"><a href="#cb9-166" aria-hidden="true" tabindex="-1"></a>    {<span class="st">"Metric"</span>: <span class="st">"Hit@5"</span>, <span class="st">"Dense only"</span>: agg[<span class="st">"hit@5"</span>], <span class="st">"Dense + rerank"</span>: agg[<span class="st">"hit@5_rerank"</span>],</span>
 <span id="cb9-167"><a href="#cb9-167" aria-hidden="true" tabindex="-1"></a>     <span class="st">"Reading"</span>: <span class="st">"4/11 questions lose gold from the top-5 after reranking"</span>},</span>
 <span id="cb9-168"><a href="#cb9-168" aria-hidden="true" tabindex="-1"></a>    {<span class="st">"Metric"</span>: <span class="st">"MRR"</span>, <span class="st">"Dense only"</span>: agg[<span class="st">"mrr_dense"</span>], <span class="st">"Dense + rerank"</span>: agg[<span class="st">"mrr_rerank"</span>],</span>
 <span id="cb9-169"><a href="#cb9-169" aria-hidden="true" tabindex="-1"></a>     <span class="st">"Reading"</span>: <span class="st">"rerank demotes gold on average — MRR drops"</span>},</span>
-<span id="cb9-170"><a href="#cb9-170" aria-hidden="true" tabindex="-1"></a>    {<span class="st">"Metric"</span>: <span class="st">"Precision@5"</span>, <span class="st">"Dense only"</span>: dense_p5, <span class="st">"Dense + rerank"</span>: agg[<span class="st">"precision@5"</span>],</span>
-<span id="cb9-171"><a href="#cb9-171" aria-hidden="true" tabindex="-1"></a>     <span class="st">"Reading"</span>: <span class="st">"lower bound — gold annotation is not exhaustive"</span>},</span>
+<span id="cb9-170"><a href="#cb9-170" aria-hidden="true" tabindex="-1"></a>    {<span class="st">"Metric"</span>: <span class="st">"Precision@5"</span>, <span class="st">"Dense only"</span>: agg[<span class="st">"precision@5"</span>], <span class="st">"Dense + rerank"</span>: agg[<span class="st">"precision@5_rerank"</span>],</span>
+<span id="cb9-171"><a href="#cb9-171" aria-hidden="true" tabindex="-1"></a>     <span class="st">"Reading"</span>: <span class="st">"precision@k is capped at 1/k"</span>},</span>
 <span id="cb9-172"><a href="#cb9-172" aria-hidden="true" tabindex="-1"></a>])</span>
 <span id="cb9-173"><a href="#cb9-173" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb9-174"><a href="#cb9-174" aria-hidden="true" tabindex="-1"></a>styler <span class="op">=</span> (df.style</span>
@@ -1113,59 +1114,65 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <span id="cb9-177"><a href="#cb9-177" aria-hidden="true" tabindex="-1"></a>    .set_properties(subset<span class="op">=</span>[<span class="st">"Reading"</span>], <span class="op">**</span>{<span class="st">"text-align"</span>: <span class="st">"left"</span>, <span class="st">"white-space"</span>: <span class="st">"normal"</span>})</span>
 <span id="cb9-178"><a href="#cb9-178" aria-hidden="true" tabindex="-1"></a>)</span>
 <span id="cb9-179"><a href="#cb9-179" aria-hidden="true" tabindex="-1"></a>styler</span>
-<span id="cb9-180"><a href="#cb9-180" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
+<span id="cb9-180"><a href="#cb9-180" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb9-181"><a href="#cb9-181" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb9-182"><a href="#cb9-182" aria-hidden="true" tabindex="-1"></a><span class="fu"># Generation evaluation</span></span>
+<span id="cb9-182"><a href="#cb9-182" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
 <span id="cb9-183"><a href="#cb9-183" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb9-184"><a href="#cb9-184" aria-hidden="true" tabindex="-1"></a>**Faithfulness (LLM-as-judge).** For each question, the judge receives the</span>
-<span id="cb9-185"><a href="#cb9-185" aria-hidden="true" tabindex="-1"></a>retrieved context and the produced answer — not the system prompt — and</span>
-<span id="cb9-186"><a href="#cb9-186" aria-hidden="true" tabindex="-1"></a>lists every factual claim, marking each as supported or unsupported by the</span>
-<span id="cb9-187"><a href="#cb9-187" aria-hidden="true" tabindex="-1"></a>context. Faithfulness = supported / total claims.</span>
-<span id="cb9-188"><a href="#cb9-188" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb9-189"><a href="#cb9-189" aria-hidden="true" tabindex="-1"></a>**Refusal accuracy.** On adversarial questions: correct only if the answer</span>
-<span id="cb9-190"><a href="#cb9-190" aria-hidden="true" tabindex="-1"></a>refuses AND does not answer anyway. The inverse failure — refusing valid</span>
-<span id="cb9-191"><a href="#cb9-191" aria-hidden="true" tabindex="-1"></a>questions (false refusal) — is reported too, because a system that says</span>
-<span id="cb9-192"><a href="#cb9-192" aria-hidden="true" tabindex="-1"></a>"I don't know" to everything is useless even if it never hallucinates.</span>
-<span id="cb9-193"><a href="#cb9-193" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb9-196"><a href="#cb9-196" aria-hidden="true" tabindex="-1"></a><span class="in">```{python}</span></span>
-<span id="cb9-197"><a href="#cb9-197" aria-hidden="true" tabindex="-1"></a><span class="co">#| label: rag-generation-metrics</span></span>
-<span id="cb9-198"><a href="#cb9-198" aria-hidden="true" tabindex="-1"></a><span class="co">#| tbl-cap: "Faithfulness and refusal accuracy"</span></span>
-<span id="cb9-199"><a href="#cb9-199" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="st">"Pending generation eval — faithfulness + refusal table will render here."</span>)</span>
-<span id="cb9-200"><a href="#cb9-200" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
-<span id="cb9-201"><a href="#cb9-201" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb9-202"><a href="#cb9-202" aria-hidden="true" tabindex="-1"></a><span class="fu"># Failure analysis: the worst five</span></span>
-<span id="cb9-203"><a href="#cb9-203" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb9-204"><a href="#cb9-204" aria-hidden="true" tabindex="-1"></a>The five questions where the pipeline ranked gold evidence lowest — each</span>
-<span id="cb9-205"><a href="#cb9-205" aria-hidden="true" tabindex="-1"></a>with a diagnosis: **chunking miss** (evidence split across chunks),</span>
-<span id="cb9-206"><a href="#cb9-206" aria-hidden="true" tabindex="-1"></a>**embedding miss** (semantics too far), **lexical trap** (keyword-matching</span>
-<span id="cb9-207"><a href="#cb9-207" aria-hidden="true" tabindex="-1"></a>retrieved the wrong section), or **rerank displacement** (cross-encoder</span>
-<span id="cb9-208"><a href="#cb9-208" aria-hidden="true" tabindex="-1"></a>demoted the gold chunk). This section is the input to the next pipeline</span>
-<span id="cb9-209"><a href="#cb9-209" aria-hidden="true" tabindex="-1"></a>iteration — the same role the trap-subset analysis plays on the</span>
-<span id="cb9-210"><a href="#cb9-210" aria-hidden="true" tabindex="-1"></a>model-evaluation page.</span>
-<span id="cb9-211"><a href="#cb9-211" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb9-214"><a href="#cb9-214" aria-hidden="true" tabindex="-1"></a><span class="in">```{python}</span></span>
-<span id="cb9-215"><a href="#cb9-215" aria-hidden="true" tabindex="-1"></a><span class="co">#| label: rag-worst-five</span></span>
-<span id="cb9-216"><a href="#cb9-216" aria-hidden="true" tabindex="-1"></a><span class="co">#| tbl-cap: "The five worst-retrieved questions, with diagnosis"</span></span>
-<span id="cb9-217"><a href="#cb9-217" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="st">"Pending eval results — worst-five table will render here."</span>)</span>
-<span id="cb9-218"><a href="#cb9-218" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
-<span id="cb9-219"><a href="#cb9-219" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb9-220"><a href="#cb9-220" aria-hidden="true" tabindex="-1"></a><span class="fu"># Limitations {.unnumbered}</span></span>
-<span id="cb9-221"><a href="#cb9-221" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb9-222"><a href="#cb9-222" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>Precision@k is a **lower bound**: gold annotation marks the best chunks,</span>
-<span id="cb9-223"><a href="#cb9-223" aria-hidden="true" tabindex="-1"></a>  not every relevant one.</span>
-<span id="cb9-224"><a href="#cb9-224" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>The gold set is small (N questions) and built by one annotator — the</span>
-<span id="cb9-225"><a href="#cb9-225" aria-hidden="true" tabindex="-1"></a>  project author. Reporting exact numbers with honest confidence beats a</span>
-<span id="cb9-226"><a href="#cb9-226" aria-hidden="true" tabindex="-1"></a>  larger set built carelessly.</span>
-<span id="cb9-227"><a href="#cb9-227" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>Faithfulness uses an LLM as judge; judge errors are possible and the judge</span>
-<span id="cb9-228"><a href="#cb9-228" aria-hidden="true" tabindex="-1"></a>  scores are not human-verified.</span>
-<span id="cb9-229"><a href="#cb9-229" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>Retrieval eval measures ranking quality on a frozen collection state;</span>
-<span id="cb9-230"><a href="#cb9-230" aria-hidden="true" tabindex="-1"></a>  production ingests new documents continuously.</span>
-<span id="cb9-231"><a href="#cb9-231" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb9-232"><a href="#cb9-232" aria-hidden="true" tabindex="-1"></a><span class="fu"># Conclusion</span></span>
-<span id="cb9-233"><a href="#cb9-233" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb9-234"><a href="#cb9-234" aria-hidden="true" tabindex="-1"></a>*To be written once the numbers exist — one-breath answer format, same as</span>
-<span id="cb9-235"><a href="#cb9-235" aria-hidden="true" tabindex="-1"></a>the model-evaluation page: what was measured, what the pipeline does well,</span>
-<span id="cb9-236"><a href="#cb9-236" aria-hidden="true" tabindex="-1"></a>where it fails, and what the next iteration changes.*</span>
+<span id="cb9-184"><a href="#cb9-184" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-185"><a href="#cb9-185" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-186"><a href="#cb9-186" aria-hidden="true" tabindex="-1"></a>"**precision@5** is low because each question has only ~1-2 gold chunks, so the metric is capped at |gold|/5 = 0.2 it measures how much of the top-5 window is gold not wether retrieval found the right chunk ('thats hit@5'). observed 0.164 approximately around 0.82 x 0.2, consistent with hit@5 = 0.82"</span>
+<span id="cb9-187"><a href="#cb9-187" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-188"><a href="#cb9-188" aria-hidden="true" tabindex="-1"></a><span class="fu"># Generation evaluation</span></span>
+<span id="cb9-189"><a href="#cb9-189" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-190"><a href="#cb9-190" aria-hidden="true" tabindex="-1"></a>**Faithfulness (LLM-as-judge).** For each question, the judge receives the</span>
+<span id="cb9-191"><a href="#cb9-191" aria-hidden="true" tabindex="-1"></a>retrieved context and the produced answer — not the system prompt — and</span>
+<span id="cb9-192"><a href="#cb9-192" aria-hidden="true" tabindex="-1"></a>lists every factual claim, marking each as supported or unsupported by the</span>
+<span id="cb9-193"><a href="#cb9-193" aria-hidden="true" tabindex="-1"></a>context. Faithfulness = supported / total claims.</span>
+<span id="cb9-194"><a href="#cb9-194" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-195"><a href="#cb9-195" aria-hidden="true" tabindex="-1"></a>**Refusal accuracy.** On adversarial questions: correct only if the answer</span>
+<span id="cb9-196"><a href="#cb9-196" aria-hidden="true" tabindex="-1"></a>refuses AND does not answer anyway. The inverse failure — refusing valid</span>
+<span id="cb9-197"><a href="#cb9-197" aria-hidden="true" tabindex="-1"></a>questions (false refusal) — is reported too, because a system that says</span>
+<span id="cb9-198"><a href="#cb9-198" aria-hidden="true" tabindex="-1"></a>"I don't know" to everything is useless even if it never hallucinates.</span>
+<span id="cb9-199"><a href="#cb9-199" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-202"><a href="#cb9-202" aria-hidden="true" tabindex="-1"></a><span class="in">```{python}</span></span>
+<span id="cb9-203"><a href="#cb9-203" aria-hidden="true" tabindex="-1"></a><span class="co">#| label: rag-generation-metrics</span></span>
+<span id="cb9-204"><a href="#cb9-204" aria-hidden="true" tabindex="-1"></a><span class="co">#| tbl-cap: "Faithfulness and refusal accuracy"</span></span>
+<span id="cb9-205"><a href="#cb9-205" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="st">"Pending generation eval — faithfulness + refusal table will render here."</span>)</span>
+<span id="cb9-206"><a href="#cb9-206" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
+<span id="cb9-207"><a href="#cb9-207" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-208"><a href="#cb9-208" aria-hidden="true" tabindex="-1"></a><span class="fu"># Failure analysis: the worst five</span></span>
+<span id="cb9-209"><a href="#cb9-209" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-210"><a href="#cb9-210" aria-hidden="true" tabindex="-1"></a>The five questions where the pipeline ranked gold evidence lowest — each</span>
+<span id="cb9-211"><a href="#cb9-211" aria-hidden="true" tabindex="-1"></a>with a diagnosis: **chunking miss** (evidence split across chunks),</span>
+<span id="cb9-212"><a href="#cb9-212" aria-hidden="true" tabindex="-1"></a>**embedding miss** (semantics too far), **lexical trap** (keyword-matching</span>
+<span id="cb9-213"><a href="#cb9-213" aria-hidden="true" tabindex="-1"></a>retrieved the wrong section), or **rerank displacement** (cross-encoder</span>
+<span id="cb9-214"><a href="#cb9-214" aria-hidden="true" tabindex="-1"></a>demoted the gold chunk). This section is the input to the next pipeline</span>
+<span id="cb9-215"><a href="#cb9-215" aria-hidden="true" tabindex="-1"></a>iteration — the same role the trap-subset analysis plays on the</span>
+<span id="cb9-216"><a href="#cb9-216" aria-hidden="true" tabindex="-1"></a>model-evaluation page.</span>
+<span id="cb9-217"><a href="#cb9-217" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-220"><a href="#cb9-220" aria-hidden="true" tabindex="-1"></a><span class="in">```{python}</span></span>
+<span id="cb9-221"><a href="#cb9-221" aria-hidden="true" tabindex="-1"></a><span class="co">#| label: rag-worst-five</span></span>
+<span id="cb9-222"><a href="#cb9-222" aria-hidden="true" tabindex="-1"></a><span class="co">#| tbl-cap: "The five worst-retrieved questions, with diagnosis"</span></span>
+<span id="cb9-223"><a href="#cb9-223" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="st">"Pending eval results — worst-five table will render here."</span>)</span>
+<span id="cb9-224"><a href="#cb9-224" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
+<span id="cb9-225"><a href="#cb9-225" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-226"><a href="#cb9-226" aria-hidden="true" tabindex="-1"></a><span class="fu"># Limitations {.unnumbered}</span></span>
+<span id="cb9-227"><a href="#cb9-227" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-228"><a href="#cb9-228" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>Precision@k is a **lower bound**: gold annotation marks the best chunks,</span>
+<span id="cb9-229"><a href="#cb9-229" aria-hidden="true" tabindex="-1"></a>  not every relevant one.</span>
+<span id="cb9-230"><a href="#cb9-230" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>The gold set is small (N questions) and built by one annotator — the</span>
+<span id="cb9-231"><a href="#cb9-231" aria-hidden="true" tabindex="-1"></a>  project author. Reporting exact numbers with honest confidence beats a</span>
+<span id="cb9-232"><a href="#cb9-232" aria-hidden="true" tabindex="-1"></a>  larger set built carelessly.</span>
+<span id="cb9-233"><a href="#cb9-233" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>Faithfulness uses an LLM as judge; judge errors are possible and the judge</span>
+<span id="cb9-234"><a href="#cb9-234" aria-hidden="true" tabindex="-1"></a>  scores are not human-verified.</span>
+<span id="cb9-235"><a href="#cb9-235" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>Retrieval eval measures ranking quality on a frozen collection state;</span>
+<span id="cb9-236"><a href="#cb9-236" aria-hidden="true" tabindex="-1"></a>  production ingests new documents continuously.</span>
+<span id="cb9-237"><a href="#cb9-237" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-238"><a href="#cb9-238" aria-hidden="true" tabindex="-1"></a><span class="fu"># Conclusion</span></span>
+<span id="cb9-239"><a href="#cb9-239" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-240"><a href="#cb9-240" aria-hidden="true" tabindex="-1"></a>*To be written once the numbers exist — one-breath answer format, same as</span>
+<span id="cb9-241"><a href="#cb9-241" aria-hidden="true" tabindex="-1"></a>the model-evaluation page: what was measured, what the pipeline does well,</span>
+<span id="cb9-242"><a href="#cb9-242" aria-hidden="true" tabindex="-1"></a>where it fails, and what the next iteration changes.*</span>
 </code></pre></div><button title="Copy to Clipboard" class="code-copy-button" data-in-quarto-modal=""><i class="bi"></i></button></div>
 </div></div></div></div></div>
 </div> <!-- /content -->

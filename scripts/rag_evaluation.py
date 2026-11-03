@@ -58,7 +58,8 @@ for i, item in enumerate(gold_set):
     dense = retrieve(question, top_k=20)          # list of dicts with "id" using top 20 k nearest neighbourhood
     dense_ids = [d["id"] for d in dense] # we store list of ids 
     # Stage 2 — rerank (top 5)
-    reranked = rerank(question, dense)            # sorted dicts with "id"
+    reranked = rerank(question, dense, top_k=len(dense)) # full 20 ordering
+    
     rerank_ids = [d["id"] for d in reranked]
 
     rec = {
@@ -73,12 +74,17 @@ for i, item in enumerate(gold_set):
     }
 
     if not item["adversarial"] and item["gold_chunk_ids"]:
+        
         gold = item["gold_chunk_ids"]
-        rec["hit@5"] = hit_at_k(rerank_ids, gold, 5)
+
+        # production pipeline = dense only
+        rec["hit@5"] = hit_at_k(dense_ids, gold, 5)
         rec["hit@20"] = hit_at_k(dense_ids, gold, 20)
+        rec["hit@5_rerank"] = hit_at_k(rerank_ids, gold, 5)
         rec["mrr_rerank"] = reciprocal_rank(rerank_ids, gold)
         rec["mrr_dense"] = reciprocal_rank(dense_ids, gold)
-        rec["precision@5"] = precision_at_k(rerank_ids, gold, 5)
+        rec["precision@5"] = precision_at_k(dense_ids, gold, 5)
+        rec["precision@5_rerank"] = precision_at_k(rerank_ids, gold, 5)
 
     records.append(rec)
 
@@ -90,9 +96,11 @@ aggregate: dict = {
     "n_real_questions": len(real_records),
     "hit@5": mean([r["hit@5"] for r in real_records]),
     "hit@20": mean([r["hit@20"] for r in real_records]),
+    "hit@5_rerank": mean([r["hit@5_rerank"] for r in real_records]),
     "mrr_dense": mean([r["mrr_dense"] for r in real_records]),
     "mrr_rerank": mean([r["mrr_rerank"] for r in real_records]),
     "precision@5": mean([r["precision@5"] for r in real_records]),
+    "precision@5_rerank": mean([r["precision@5_rerank"] for r in real_records]),
 }
 
 # 6. Save + print summary 

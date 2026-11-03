@@ -1,0 +1,74 @@
+{
+  "discovered_topics": {
+    "method": "gensim CoherenceModel (c_v)",
+    "per_topic": [
+      {
+        "id": 0,
+        "name": "0_rasa_therapy_positif_perkembangan",
+        "c_v": 0.4612,
+        "top_words": "rasa, therapy, positif, perkembangan, perkembangan positif"
+      },
+      {
+        "id": 1,
+        "name": "1_nampak_keluar_bergaul_main",
+        "c_v": 0.4203,
+        "top_words": "nampak, keluar, bergaul, main, buka"
+      },
+      {
+        "id": 2,
+        "name": "2_therapy_session_positive_session aqeela",
+        "c_v": 0.3409,
+        "top_words": "therapy, session, positive, session aqeela, syuhada"
+      },
+      {
+        "id": 3,
+        "name": "3_tidur_aktif_wajib tidur_buai",
+        "c_v": 0.2282,
+        "top_words": "tidur, aktif, wajib tidur, buai, melayu"
+      }
+    ],
+    "mean_c_v": 0.3626,
+    "n_topics": 4,
+    "n_docs": 136
+  },
+  "defined_topics": {
+    "method": "gensim CoherenceModel (c_v) — DEFINED topics (seed_topics.py)",
+    "per_topic": [
+      {
+        "name": "Progress and Sessions",
+        "c_v": 0.5048,
+        "top_words": "perkembangan, sesi, mula, anak, perubahan",
+        "n_keywords": 13
+      },
+      {
+        "name": "Behaviour and Transitions",
+        "c_v": 0.5517,
+        "top_words": "anak, makan, perubahan, mula, nak",
+        "n_keywords": 14
+      },
+      {
+        "name": "Sleep and Routine",
+        "c_v": 0.2632,
+        "top_words": "tidur, malam, lena, nyenyak, balut",
+        "n_keywords": 11
+      },
+      {
+        "name": "Speech and Emotional Feedback",
+        "c_v": 0.4157,
+        "top_words": "perkembangan, positif, nampak, sikit, doktor",
+        "n_keywords": 14
+      },
+      {
+        "name": "School and Play Interaction",
+        "c_v": 0.5353,
+        "top_words": "cikgu, minggu, sekolah, tantrum, rawatan",
+        "n_keywords": 14
+      }
+    ],
+    "mean_c_v": 0.4541,
+    "n_topics": 5,
+    "n_docs": 136,
+    "note": "measures whether manually-defined keywords co-occur in corpus"
+  },
+  "computed_at": "2026-11-03T18:52:28"
+}
