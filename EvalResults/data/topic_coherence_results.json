@@ -4,71 +4,65 @@
     "per_topic": [
       {
         "id": 0,
-        "name": "0_rasa_therapy_positif_perkembangan",
-        "c_v": 0.4612,
-        "top_words": "rasa, therapy, positif, perkembangan, perkembangan positif"
+        "name": "0_rasa_tidur_makan_menangis",
+        "c_v": 0.4818,
+        "top_words": "rasa, tidur, makan, menangis, nasi"
       },
       {
         "id": 1,
-        "name": "1_nampak_keluar_bergaul_main",
-        "c_v": 0.4203,
-        "top_words": "nampak, keluar, bergaul, main, buka"
+        "name": "1_nampak_bergaul_main_baru",
+        "c_v": 0.4297,
+        "top_words": "nampak, bergaul, main, baru, nangis"
       },
       {
         "id": 2,
-        "name": "2_therapy_session_positive_session aqeela",
-        "c_v": 0.3409,
-        "top_words": "therapy, session, positive, session aqeela, syuhada"
-      },
-      {
-        "id": 3,
-        "name": "3_tidur_aktif_wajib tidur_buai",
-        "c_v": 0.2282,
-        "top_words": "tidur, aktif, wajib tidur, buai, melayu"
+        "name": "2_session_positive_second autism_syuhada jerit",
+        "c_v": 0.3648,
+        "top_words": "session, positive, second autism, syuhada jerit, 16th"
       }
     ],
-    "mean_c_v": 0.3626,
-    "n_topics": 4,
-    "n_docs": 136
+    "mean_c_v": 0.4254,
+    "n_topics": 3,
+    "n_docs": 135
   },
   "defined_topics": {
     "method": "gensim CoherenceModel (c_v) — DEFINED topics (seed_topics.py)",
     "per_topic": [
       {
         "name": "Progress and Sessions",
-        "c_v": 0.5048,
+        "c_v": 0.5052,
         "top_words": "perkembangan, sesi, mula, anak, perubahan",
         "n_keywords": 13
       },
       {
         "name": "Behaviour and Transitions",
-        "c_v": 0.5517,
+        "c_v": 0.552,
         "top_words": "anak, makan, perubahan, mula, nak",
         "n_keywords": 14
       },
       {
         "name": "Sleep and Routine",
-        "c_v": 0.2632,
+        "c_v": 0.2678,
         "top_words": "tidur, malam, lena, nyenyak, balut",
         "n_keywords": 11
       },
       {
         "name": "Speech and Emotional Feedback",
-        "c_v": 0.4157,
+        "c_v": 0.4161,
         "top_words": "perkembangan, positif, nampak, sikit, doktor",
         "n_keywords": 14
       },
       {
         "name": "School and Play Interaction",
-        "c_v": 0.5353,
+        "c_v": 0.5356,
         "top_words": "cikgu, minggu, sekolah, tantrum, rawatan",
         "n_keywords": 14
       }
     ],
-    "mean_c_v": 0.4541,
+    "mean_c_v": 0.4553,
     "n_topics": 5,
-    "n_docs": 136,
+    "n_docs": 135,
     "note": "measures whether manually-defined keywords co-occur in corpus"
   },
-  "computed_at": "2026-11-03T18:52:28"
+  "computed_at": "2026-11-06T10:32:55"
 }

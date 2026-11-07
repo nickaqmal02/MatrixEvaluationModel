@@ -85,7 +85,8 @@ the model-evaluation page: only the pipeline stage changes.
 
 | Metric | Question it answers | Formula |
 |---|---|---|
-| Hit@k | Is any gold chunk in the top-k? | mean over questions of 1[found] |
+| Hit@k | Is *any* gold chunk in the top-k? | mean over questions of 1[found] |
+| Recall@k | Are *all* gold chunks in the top-k? | mean of \|top-k ∩ gold\| / \|gold\| |
 | MRR | How high does the *first* gold chunk rank? | mean of 1/rank_first_gold (0 if never) |
 | Precision@k | How much noise feeds the LLM? | \|top-k ∩ gold\| / k (lower bound: gold annotation not exhaustive) |
 
@@ -99,7 +100,9 @@ questions, the embedding model places at least one gold chunk inside the
 top-20 candidates. The funnel mouth never misses.
 
 The cross-encoder rerank then **reduces** quality: MRR drops from
-0.56 to 0.44, and 4 of 11 questions lose gold from the top-5 entirely.
+0.56 to 0.44, hit@5 falls 0.82→0.73 (3 of 11 questions lose gold from
+the top-5), and the stricter **recall@5** — all gold chunks inside the
+window, not just one — falls 0.77→0.59.
 The failure mode is *displacement*: dense retrieval hands the reranker
 gold in strong positions (rank 1, 3, 4) and the cross-encoder demotes it
 below rank 5. Worst case — *"why does my autistic child only want to eat
@@ -150,9 +153,20 @@ def hit_at_k(ranked_ids: list[str], gold_ids: list[str], k: int) -> int:
 def precision_at_k(ranked_ids: list[str], gold_ids: list[str], k: int) -> float:
     return len(set(ranked_ids[:k]) & set(gold_ids)) / k
 
+def recall_at_k(ranked_ids: list[str], gold_ids: list[str], k: int) -> float:
+    """Strict companion to hit@k: ALL gold must be inside top-k, not just one."""
+    return len(set(ranked_ids[:k]) & set(gold_ids)) / len(gold_ids)
+
 real = [r for r in res["records"] if not r["adversarial"]]
 dense_hit5 = sum(hit_at_k(r["dense_ranked_ids"], r["gold_chunk_ids"], 5) for r in real) / len(real)
 dense_p5 = sum(precision_at_k(r["dense_ranked_ids"], r["gold_chunk_ids"], 5) for r in real) / len(real)
+dense_rec5 = sum(recall_at_k(r["dense_ranked_ids"], r["gold_chunk_ids"], 5) for r in real) / len(real)
+rerank_rec5 = sum(recall_at_k(r["rerank_ranked_ids"], r["gold_chunk_ids"], 5) for r in real) / len(real)
+gold_lost_rerank = sum(
+    1 for r in real
+    if recall_at_k(r["dense_ranked_ids"], r["gold_chunk_ids"], 5) == 1.0
+    and recall_at_k(r["rerank_ranked_ids"], r["gold_chunk_ids"], 5) < 1.0
+)
 
 # Every number followed by its interpretation — the table argues,
 # not just reports.
@@ -160,7 +174,9 @@ df = pd.DataFrame([
     {"Metric": "Hit@20", "Dense only": agg["hit@20"], "Dense + rerank": None,
      "Reading": "perfect — gold reaches the top-20 for all 11 real questions"},
     {"Metric": "Hit@5", "Dense only": agg["hit@5"], "Dense + rerank": agg["hit@5_rerank"],
-     "Reading": "4/11 questions lose gold from the top-5 after reranking"},
+     "Reading": "3/11 questions lose gold from the top-5 after reranking"},
+    {"Metric": "Recall@5", "Dense only": dense_rec5, "Dense + rerank": rerank_rec5,
+     "Reading": f"strict: ALL gold inside top-5 — rerank evicts the sole gold chunk on {gold_lost_rerank} questions (recall 1.0→0.0)"},
     {"Metric": "MRR", "Dense only": agg["mrr_dense"], "Dense + rerank": agg["mrr_rerank"],
      "Reading": "rerank demotes gold on average — MRR drops"},
     {"Metric": "Precision@5", "Dense only": agg["precision@5"], "Dense + rerank": agg["precision@5_rerank"],

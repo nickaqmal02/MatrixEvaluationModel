@@ -319,7 +319,6 @@ DEFINED_TOPICS: list[dict[str, Any]] = [
     },
 ]
 
-
 def compute_cv_defined(
     corpus_texts: list[str],
 ) -> dict[str, Any]:

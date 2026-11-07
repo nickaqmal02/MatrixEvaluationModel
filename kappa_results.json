@@ -1,0 +1,17 @@
+{
+  "sample_100": {
+    "n": 100,
+    "kappa": 0.9397,
+    "observed_agreement": 0.96
+  },
+  "sample_150": {
+    "n": 150,
+    "kappa": 0.7804,
+    "observed_agreement": 0.8533
+  },
+  "combined": {
+    "n": 250,
+    "kappa": 0.8442,
+    "observed_agreement": 0.896
+  }
+}
