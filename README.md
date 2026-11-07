@@ -28,6 +28,8 @@ the cross-encoder rerank stage strictly degrades it at equal k.**
 | MRR | **0.56** | 0.44 |
 | Precision@5 | **0.22** | 0.13 |
 
+![RAG evaluation report — first page](media/FrontFaceRagEvaluation.png)
+
 ![RAG retrieval metrics — dense vs dense+rerank](media/RagEvalTable.png)
 
 Evidence-driven next step: swap `ms-marco-MiniLM` (English-trained) for a
