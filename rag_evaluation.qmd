@@ -1,10 +1,46 @@
 ---
 title: "Sentiri RAG Evaluation Does the Chatbot Retrieve the Right Evidence?"
 subtitle: "Retrieval & faithfulness measurement for the autism-clinic knowledge chatbot"
-author: "Nik Abdul Aqmal"
-date: today
+author:
+  - name: Nik Abdul Aqmal Bin Zunaidi
+    affiliation:
+    - Massachusetts Institute of Technology (MIT)
+    - National Defence University Malaysia (NDUM)
+    degrees:
+    - B.S. Computer Science With Honours (BIG DATA & AI)
+    email: nikabdulaqmal@gmail.com
+date: 2026-11-7
+bibliography: references.bib
+format:
+  html:
+    theme: sketchy
+    toc: true
+    toc-depth: 3
+    code-fold: true
+    code-tools: true
+    execute:
+      echo: true
+      warning: false
+
+  pdf:
+    toc: true
+
 jupyter: jupyter_env
 ---
+
+
+
+#### **Daily Task 😃**
+
+##### 7 Nov 2026
+- [x] Finish evaluating rag retrieval results
+- [x] Prove that the description in adversarial column still not determine wether LLM will answer or not
+
+##### tomorrow task
+- [ ] Finish feeding our gold_set_rag question with much more challenging question **sophisticated question**
+- [ ] Swap Embedding models to BGE-m3 to see wether is it any performance improvement
+
+
 
 # Introduction {.unnumbered}
 
@@ -27,16 +63,125 @@ question → embed (MiniLM multilingual)
          → grounded LLM answer + citations ── generation (Groq)
 ```
 
-Two stages fail in different ways — retrieval misses the evidence,
-generation ignores or overreaches it — so each is evaluated separately.
+> Two stages fail in different ways: retrieval misses the evidence,
+
+
+> generation ignores or overreaches it: so each is evaluated separately.
+
+According to our pipeline we use **dense embeddings setup and NOT BM25 setup** why ? lets dive into it
+
+Firstly, we need to understand where and how to use Best Match 25 ? in our architecture ?
+
+```
+question → tokenize (lowercase, Sastrawi stem)  ── query must see the
+                                                   same preprocessing as
+                                                   the index, or scores die
+         → BM25 score vs inverted index  ── lexical recall (cheap, broad)
+              (term freq × idf ÷ doc length)
+         → top-20 candidate chunk ids
+         → cross-encoder rerank → top-5     ── precision (slow, sharp)
+         → grounded LLM answer + citations  ── generation (Groq)
+
+
+Index side (built once, offline):
+
+
+chunks → tokenize (same pipeline!) → inverted index:
+         term → [(chunk_id, tf, doc_len)]
+
+
+And since the real-world version is usually hybrid, the full picture:
+
+
+  == BELOW SHOWS THE DIFFERENCES BETWEEN USING DENSE EMBEDDINGS PIPELINE VS BM-25 ==
+
+                 ┌─ embed → ChromaDB cosine top-20 ─┐
+question ────────┤                                  ├→ fuse (RRF) → top-20
+                 └─ tokenize → BM25 top-20 ─────────┘        → rerank → top-5
+                                                               → LLM + citations
+
+```
+
+### **The full strategy of building this RAG pipeline**
+
+```
+
+FILE: chat_analyzer/services/rag_service.py
+Ported from PersonalRAG, one key change (multilingual embedding for Malay).
+
+MODELS
+  Embedding: paraphrase-multilingual-MiniLM-L12-v2 (SentenceTransformer, 384-dim, lazy singleton)
+  Reranker:  cross-encoder/ms-marco-MiniLM-L-6-v2 (CrossEncoder, lazy singleton)
+  LLM:       Groq openai/gpt-oss-120b, temp 0.1, max_tokens 1024 (GROQ_API_KEY env-only)
+
+STORE
+  ChromaDB PersistentClient, dir data/vector_store/
+  Collection "treatment_documents", hnsw:space=cosine
+  Chunk ids: md5(doc_title)[:8] + index → e.g. "9349f30a_3" (these are your gold-set annotation ids)
+
+CONFIG (hardcoded constants, not env)
+  CHUNK_SIZE 1000 chars, CHUNK_OVERLAP 200
+  TOP_K 5 (post-rerank), RETRIEVE_K 20 (dense recall), SCORE_THRESHOLD 0.2
+
+INGEST (ingest_document, called by Celery on doctor upload)
+  load_and_chunk: PyMuPDFLoader (PDF) / TextLoader (.txt/.md) →
+    RecursiveCharacterTextSplitter(1000/200, default separators) →
+    metadata {source, page, chunk_index}
+  embed_and_store: batch encode → collection.add(ids, embeddings, documents,
+    metadata {source, page, chunk_index, doc_title, document_id?})
+  Returns IngestionResult {status: ready|failed, chunks_created, error}
+  document_id links chunks → TreatmentDocument row → file_url for citations
+
+QUERY (query(), called by chatbot view)
+  1. retrieve(question, top_k=20): encode query → ChromaDB cosine query →
+     cosine distance→similarity = (2-d)/2 → filter similarity < 0.2 → RetrievedChunk
+  2. rerank(query, docs, top_k=5): CrossEncoder.predict on (query, content) pairs →
+     sort desc by rerank_score → top 5
+  3. build_context: numbered [Document i - title, page (relevance: X%)] headers
+  4. build_sources: {title, page, score, preview[:200], file_url} —
+     single TreatmentDocument query (no N+1)
+  5. calculate_confidence: sigmoid(max rerank score)
+  6. generate_answer: Malay system prompt (grounded-only, refuse if insufficient,
+     match answer language to question) + context + question → Groq
+  Returns RAGResponse {answer, sources, confidence, context?}
+
+UTILITIES
+  get_collection_stats(): chunk count for dashboard
+  delete_document_chunks(doc_title): where={doc_title} filter → delete
+
+KNOWN STATE
+  Collection: 14 chunks / 3 PDFs (annotated gold ids from col.get())
+  Reranker: caught degrading hit@5 1.00→0.64 in eval, currently still in the
+    pipeline path (fix-or-remove verdict pending — BGE-m3 one-line swap is the fix)
+
+
+```
+
+::: {.callout-note}
+**BGE-M3 [@bge-m3]?** what is it ? 
+
+1. Paper: Chen, Xiao, Zhang, Luo, Lian, Liu (2024). "BGE M3-Embedding: Multi-Lingual, Multi-Functionality, Multi-Granularity Text Embeddings Through Self-Knowledge Distillation." arXiv:2402.03216
+2. Model card: https://huggingface.co/BAAI/bge-m3
+3. Code: https://github.com/FlagOpen/FlagEmbedding (FlagEmbedding/BGE_M3)
+
+>  An **embedding model** from BAAI Beijing Ai Academy m3 means = three multi's 
+
+- Multi-Functionality: one model, three retrieval modes — dense, sparse (lexical), multi-vector (ColBERT-style) — trained via unified fine-tuning with self-knowledge distillation from all three. The sparse output is a vocab-sized vector, mostly zeros, weight per token present in the text — same family as BM25/uniCOIL/SPLADE but learned.
+- Multi-Linguality: 100+ working languages.
+- Multi-Granularity: inputs from short sentences up to 8192 tokens.
+- Concrete spec: 1024-dim embeddings (vs MiniLM's 384), max_length 8192, architecture = xlm-roberta-large extended to 8192 and further pretrained with RetroMAE, then contrastive learning (bge-m3-unsupervised), then unified fine-tuning.
+
+But first we will use standard ms-marco-MiniLM-L-6-v2
+:::
+
 
 ## Requirements that drive RAG evaluation
 
 | # | Requirement | Consequence for evaluation |
 |---|---|---|
-| R1 | Parent questions in Malay / rojak; documents in Malay & English | Gold set must include code-switched queries, not just clean English |
+| R1 | Parent questions in Malay / English / rojak; documents in Malay & English | Gold set must include code-switched queries, not just clean English |
 | R2 | Medical-adjacent domain: hallucinated therapy advice is the worst failure mode | Faithfulness (answer grounded in retrieved chunks) is the priority generation metric |
-| R3 | Therapists must verify every claim against the source | Citations must point at real, retrievable chunks — retrieval quality is upstream of trust |
+| R3 | Therapists must verify every claim against the source | Citations must point at real, retrievable chunks: retrieval quality is upstream of trust |
 | R4 | The system must know when it does not know | Refusal accuracy on out-of-domain questions is measured explicitly |
 | R5 | Production configuration: retrieve-20 → rerank-5, chunk 1000/200, cosine | Config constants are evaluated as-is, then challenged in the failure analysis |
 
@@ -193,9 +338,269 @@ styler
 
 ```
 
-
-
 "**precision@5** is low because each question has only ~1-2 gold chunks, so the metric is capped at |gold|/5 = 0.2 it measures how much of the top-5 window is gold not wether retrieval found the right chunk ('thats hit@5'). observed 0.164 approximately around 0.82 x 0.2, consistent with hit@5 = 0.82"
+
+
+
+## ADD NEW RAG gold question
+
+::: {.callout-tip collapse="true"}
+## **Our current rag gold questions**
+
+```{python}
+#| label: tbl-goldset
+#| tbl-cap: "Current gold question set (13 questions, 11 real + 2 adversarial)"
+#| echo: false
+import json
+import pandas as pd
+
+with open("gold_set_rag.json") as f:
+    gold_set = json.load(f)
+
+rows = []
+for q in gold_set:
+    gold = ", ".join(q["gold_chunk_ids"]) if q["gold_chunk_ids"] else "— (refusal)"
+    rows.append({
+        "#": q["id"],
+        "Question": q["question"][:70] + ("…" if len(q["question"]) > 70 else ""),
+        "Gold chunks": gold,
+        "Lang": q["lang"],
+        "Diff": q["difficulty"],
+        "Test": q["notes"].split("—")[0].split(":")[0].strip(),
+    })
+pd.DataFrame(rows)
+
+
+```
+:::
+
+::: {.callout-tip collapse="true"}
+## **The results of our retrieval [click to see the result]**
+
+```{python}
+#| label: tbl-retrieval-results
+#| tbl-cap: "Per-question retrieval results - dense top-20 vs reranked top-5 vs gold"
+
+import json
+import pandas as pd
+
+with open("rag_eval_results.json") as f:
+    results = json.load(f)
+
+def rank_of(ids: list[str], gold: set[str]) -> str:
+    return next((str(i+1) for i, cid in enumerate(ids) if cid in gold), "miss")
+
+rows = []
+for rec in results["records"]:
+    if rec["adversarial"]:
+        continue  # refusal questions: judged at generation, not retrieval
+    gold = set(rec["gold_chunk_ids"])
+    d_ids, r_ids = rec["dense_ranked_ids"], rec["rerank_ranked_ids"]
+    rows.append({
+        "#": rec["id"],
+        "Question": rec["question"][:40] + "…",
+        "Gold": ", ".join(rec["gold_chunk_ids"]),
+        "Dense rank": rank_of(d_ids, gold),
+        "Rerank rank": rank_of(r_ids, gold),
+        "Dense@5": "✓" if set(d_ids[:5]) & gold else "✗",
+        "Rerank@5": "✓" if set(r_ids[:5]) & gold else "✗",
+    })
+
+pd.DataFrame(rows)
+
+```
+
+```{python}
+print(f"dense rank and rerank rank ? \nit means for dense retrieval embeddings the first chunks ids in \nwhat rank it shows up the highest")
+
+print(f"\nbut how about the Adversarial question ?")
+
+```
+#### > below are the test for our adversarial question <
+
+```{python}
+#| label: tbl-adversarial
+#| tbl-cap: "Adversarial questions — what retrieval does when no evidence exists"
+rows = []
+for rec in results["records"]:
+    if not rec["adversarial"]:
+        continue
+    d_ids, d_scores = rec["dense_ranked_ids"], rec["dense_scores"]
+    rows.append({
+        "#": rec["id"],
+        "Question": rec["question"][:45] + "…",
+        "Chunks past threshold": len(d_ids),
+        "Top chunk": d_ids[0] if d_ids else "none",
+        "Top similarity": round(d_scores[0], 3) if d_scores else "—",
+        "Top rerank score": round(rec["rerank_scores"][0], 3) if rec.get("rerank_scores") else "—",
+    })
+pd.DataFrame(rows)
+
+```
+
+#### Lets dive into this one by one col. ?
+
+> **1."Chunks pass threshold"=20**
+>
+> We asked for top-20 chunks, so all 20 chunks scored similarity >= 0.5, because our cutoff is 0.2, so all 20 survive.
+>
+> ========================
+>
+>
+> **2. "Top chunk" = 7a2ee7cf_3**
+>
+> This is just the ID of the chunk that ranked #1 for this question. It's name not a score yet. Which chunk is it? 
+>
+> 7a2ee7cf_3 is the speech therapy doc, chunk 3 - the one containing "2-3 kali seminggu, 45min-1jam" (session frequency/duration)
+>
+> So when a parent asks about PRICE, the #1 chunk retrieval grabs is the one about how OFTEN sessions happen.
+> 
+> Related topic, wrong content.>
+>
+> **3."Top similarity" = 0.710**
+> 
+> This is ChromaDB's cosine similarity between the question's embedding and that top chunk's embedding,
+>
+> converted from distance. It answers: "how confident does DENSE retrieval feel about this top chunk?" 0.710 on a 0-1 scale (roughly).
+>
+> For context,  REAL questions that got correctly answered
+>
+> their top similarities are in the same ballpark (Q10 even scored 0.846!). 
+>
+> That's the punchline of this column: the similarity score for an unanswerable question (0.71, 0.85) 
+>
+> is indistinguishable from the score for an answerable one. 
+>
+> The number LOOKS confident but means nothing: similarity measures topic closeness ("therapy"),
+>
+> not answer presence ("price"). A similarity threshold can never separate these.
+>
+>** 4."Top rerank score" = 2.305 (Q9) vs -4.103 (Q10)**
+>
+> This is the cross-encoder's score for the (question, top chunk) pair.
+>
+> It answers a DIFFERENT question than similarity: "does this chunk actually ANSWER this question?"
+>
+> the cross-encoder reads both texts together, so it grades relevance, not topic. Scale: unbounded, roughly anything positive = "this looks like an answer", strongly negative = "this does not answer it."
+>
+> Q10: -4.1 → the reranker says loud and clear "this chunk does NOT answer 'what age to start intervention'." Correct judgment.
+>
+> Q9: +2.3 → the reranker says "yes, this looks relevant to 'how much do sessions cost'" — WRONG judgment, because frequency and cost are lexically close ("berapa kerap" vs "berapa kos"). The reranker got fooled on the near-miss.
+
+
+::: {.callout-note appearance="simple" collapse="true"}
+#### BUT the real question is ? will LLM give answer for this question ?? [click here to see the results]
+
+```{python}
+#| label: adversarial execution
+#| echo: true
+import sys, os
+sys.path.insert(0, "/Users/apple/degree/finalyearengineredo")
+
+# load env keys (GROQ_API_KEY) without hardcoding
+with open("/Users/apple/degree/finalyearengineredo/.env") as f:
+    for line in f:
+        line = line.strip()
+        if line and not line.startswith("#") and "=" in line:
+            k, v = line.split("=", 1)
+            os.environ.setdefault(k.strip(), v.strip())
+
+os.environ["USE_SQLITE"] = "1"  # local dev db (no TreatmentDocument table)
+os.environ.setdefault("DJANGO_SETTINGS_MODULE", "finalyearengineredo.settings")
+import django; django.setup()
+
+from chat_analyzer.services.rag_service import (
+    retrieve, rerank, build_context, generate_answer,
+)
+
+adversarial = [
+    (9,  "berapa kos sesi terapi pertuturan di Malaysia?"),
+    (10, "anak saya ada tanda autism, umur berapa patluh start intervention?"),
+]
+
+results: list[dict] = []
+for qid, q in adversarial:
+    dense   = retrieve(q, top_k=20)          # 20 chunks, nothing filtered
+    top5    = rerank(q, dense, top_k=5)      # reranker picks 5
+    context = build_context(top5)            # these go to the LLM
+    answer  = generate_answer(q, context)    # the moment of truth
+
+    refused = "tidak mempunyai maklumat" in answer.lower()
+    results.append({
+        "#": qid, "question": q, "refused": refused, "answer": answer,
+    })
+    print(f"--- Q{qid}: {q}")
+    print(f"    context chunks: {len(top5)}, top rerank: {top5[0]['rerank_score']:.2f}")
+    print(f"    REFUSED: {refused}")
+    print(f"    ANSWER: {answer}")
+    print()
+
+refusal_rate = sum(r["refused"] for r in results) / len(results)
+print(f"refusal accuracy: {refusal_rate:.0%} ({sum(r['refused'] for r in results)}/{len(results)})")
+
+
+```
+:::
+
+:::
+
+
+::: {.callout-caution collapse="true"}
+## **What to add to our gold set of question ?** [click here]
+
+
+Current set: 13 questions (11 real + 2 adversarial). Dense retrieval is at
+ceiling on it — hit@20 = 1.00, so **no embedding change can show improvement
+on questions that are already all retrieved**. New questions must be designed
+to break the ceiling, each targeting a named failure mode:
+
+1. Multi-hop (2 gold chunks, different docs) — the visible gap.
+Questions whose answer needs evidence from two documents, e.g. a feeding
+problem that is treated WITH a communication approach ("anak saya tolak
+makan sebab tak reti nak minta — apa nak buat?" → feeding chunk + AAC/PECS
+chunk). Current set has no question with gold chunks in two different docs.
+Tests: can retrieval surface BOTH, or does one topic dominate?
+
+2. Hard paraphrase (zero lexical overlap).
+Q2 tested mild paraphrase ("tunggu giliran" vs "gilir bercakap"). Next level:
+questions that share no words with the gold chunk — pure semantics
+("anak saya buat hal bila tak dapat apa dia nak" for the screaming/tantrum
+chunk, where the doc says "menjerit" / "challenging behaviour"). Tests: how
+far can paraphrase go before dense retrieval breaks?
+
+3. Cross-lingual, hard mode.
+Q3/Q12 are English→Malay-doc, but on easy topics. Add one where the English
+question uses vocabulary that never appears in the Malay chunk. Tests: the
+embedding space's cross-lingual depth, which is exactly what a BGE-m3 swap
+claims to improve.
+
+4. Near-miss adversarial (the Q9 trap, weaponized).
+Current adversarial questions fail cleanly. Add ones where retrieval DOES
+find topic-adjacent content that plausibly-but-wrongly answers
+(e.g. a medication-dosage or therapy-qualification question near the
+session-frequency chunk). Tests: refusal under real temptation — the
+generation-layer failure case, not the easy one.
+
+5. Expanded refusal set (adversarial, easy mode, quantity).
+5–8 more unanswerable questions (prices, locations, doctor names, legal,
+vaccine) so refusal accuracy becomes a real n, not n=2.
+
+Plan: ~8–10 new questions total, old 13 kept (regression check — pipeline
+runs in ~37s). Annotate gold chunk ids by hand from col.get() as before,
+freeze the set, rerun. THEN the BGE-m3 embedding swap has measurable room
+to help — and if it doesn't, that's a finding too.
+
+Order matters: gold set first (the instrument), model swap second (the
+treatment). Otherwise the swap verdict is meaningless.
+
+
+
+
+
+:::
+
+
+
 
 # Generation evaluation
 
@@ -248,3 +653,90 @@ print("Pending eval results — worst-five table will render here.")
 *To be written once the numbers exist — one-breath answer format, same as
 the model-evaluation page: what was measured, what the pipeline does well,
 where it fails, and what the next iteration changes.*
+
+## Appendix: Gold-set drafting form {.unnumbered}
+
+```{=html}
+<form id="goldset-form">
+  <div class="mb-2">
+    <label class="form-label">Question</label>
+    <input type="text" class="form-control" id="q-text" placeholder="e.g. anak saya tolak makan sebab tak reti nak minta, apa nak buat?">
+  </div>
+  <div class="row mb-2">
+    <div class="col">
+      <label class="form-label">Gold chunk ids (comma separated)</label>
+      <input type="text" class="form-control" id="q-gold" placeholder="e.g. a9aab0e9_1, 7a2ee7cf_1">
+    </div>
+    <div class="col">
+      <label class="form-label">Test type</label>
+      <select class="form-select" id="q-type">
+        <option>multi-hop</option>
+        <option>hard-paraphrase</option>
+        <option>cross-lingual</option>
+        <option>near-miss adversarial</option>
+        <option>refusal</option>
+        <option>paraphrase</option>
+      </select>
+    </div>
+  </div>
+  <div class="row mb-2">
+    <div class="col">
+      <label class="form-label">Lang</label>
+      <select class="form-select" id="q-lang">
+        <option>ms</option><option>en</option><option>rojak</option>
+      </select>
+    </div>
+    <div class="col">
+      <label class="form-label">Notes</label>
+      <input type="text" class="form-control" id="q-notes" placeholder="what failure mode this targets">
+    </div>
+  </div>
+  <button type="button" class="btn btn-primary" onclick="addEntry()">Add question</button>
+  <button type="button" class="btn btn-success" onclick="copyJSON()">Copy JSON</button>
+  <button type="button" class="btn btn-outline-danger" onclick="clearEntries()">Clear all</button>
+</form>
+
+<pre id="goldset-output" class="bg-light p-2 mt-3" style="min-height:60px"></pre>
+
+<script>
+function loadEntries() {
+  return JSON.parse(localStorage.getItem("goldset_drafts") || "[]");
+}
+function addEntry() {
+  const entries = loadEntries();
+  entries.push({
+    id: entries.length + 100,
+    question: document.getElementById("q-text").value,
+    gold_chunk_ids: document.getElementById("q-gold").value
+      .split(",").map(s => s.trim()).filter(Boolean),
+    test_type: document.getElementById("q-type").value,
+    lang: document.getElementById("q-lang").value,
+    difficulty: "",
+    adversarial: document.getElementById("q-type").value.includes("adversarial") || document.getElementById("q-type").value === "refusal",
+    notes: document.getElementById("q-notes").value,
+  });
+  localStorage.setItem("goldset_drafts", JSON.stringify(entries));
+  render();
+  document.getElementById("q-text").value = "";
+  document.getElementById("q-gold").value = "";
+  document.getElementById("q-notes").value = "";
+}
+function copyJSON() {
+  const txt = JSON.stringify(loadEntries(), null, 2);
+  navigator.clipboard.writeText(txt);
+  alert("Copied " + loadEntries().length + " entries to clipboard");
+}
+function clearEntries() {
+  if (confirm("Delete all draft questions?")) {
+    localStorage.removeItem("goldset_drafts");
+    render();
+  }
+}
+function render() {
+  document.getElementById("goldset-output").textContent =
+    JSON.stringify(loadEntries(), null, 2);
+}
+render();
+</script>
+```
+

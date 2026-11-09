@@ -1,11 +1,11 @@
 ---
-title: "Sentiri Model Evaluation — Why XLM-RoBERTa and BERTopic?"
+title: "Sentiri Model Evaluation: Why XLM-RoBERTa and BERTopic?"
 subtitle: "Sentiment model comparison & topic modeling justification for an autism therapy chat analyzer"
 author: "Nik Abdul Aqmal"
-date: today
+date: 2026-11-7
 format:
   html:
-    theme: cosmo
+    theme: sketchy
     toc: true
     toc-depth: 3
     code-fold: true
@@ -17,6 +17,11 @@ jupyter: jupyter_env
 cache: true          # project-level switch: enables jupyter-cache for cells
                     # carrying `#| cache: true` (heavy model cells only).
 ---
+
+##### **FUTURE IMPROVEMENT**😄
+- [ ] Try out smaller batch to to check wether increase the accuracy or not **current batch size = 16**
+
+
 
 # Introduction {.unnumbered}
 
